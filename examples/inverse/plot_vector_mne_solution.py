@@ -1,4 +1,7 @@
 """
+
+.. _ex-vector-mne-solution:
+
 ============================================
 Plotting the full vector-valued MNE solution
 ============================================
@@ -15,7 +18,7 @@ estimated magnitude. This can be accomplished by computing a
 It can also be instructive to visualize the actual dipole/activation locations
 in 3D space in a glass brain, as opposed to activations imposed on an inflated
 surface (as typically done in :meth:`mne.SourceEstimate.plot`), as it allows
-you to get a better sense of the true underlying source geometry.
+you to get a better sense of the underlying source geometry.
 """
 # Author: Marijn van Vliet <w.m.vanvliet@gmail.com>
 #

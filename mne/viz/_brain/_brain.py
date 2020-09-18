@@ -245,7 +245,6 @@ class _Brain(object):
                                        bgcolor=background,
                                        shape=shape,
                                        fig=figure)
-
         for h in self._hemis:
             # Initialize a Surface object as the geometry
             geo = Surface(subject_id, h, surf, subjects_dir, offset,
@@ -298,6 +297,12 @@ class _Brain(object):
         for h in self._hemis:
             for ri, ci, v in self._iter_views(h):
                 self.show_view(v, row=ri, col=ci, hemi=h)
+
+        if surf == 'flat':
+            self._renderer.set_interaction("rubber_band_2d")
+
+        if hemi == 'rh' and hasattr(self._renderer, "_orient_lights"):
+            self._renderer._orient_lights()
 
     @property
     def interaction(self):
@@ -518,14 +523,16 @@ class _Brain(object):
         self._data['time'] = time
         self._data['initial_time'] = initial_time
         self._data['time_label'] = time_label
+        self._data['initial_time_idx'] = time_idx
         self._data['time_idx'] = time_idx
         self._data['transparent'] = transparent
         # data specific for a hemi
         self._data[hemi] = dict()
         self._data[hemi]['actors'] = None
         self._data[hemi]['mesh'] = None
+        self._data[hemi]['glyph_dataset'] = None
+        self._data[hemi]['glyph_mapper'] = None
         self._data[hemi]['glyph_actor'] = None
-        self._data[hemi]['glyph_mesh'] = None
         self._data[hemi]['array'] = array
         self._data[hemi]['vertices'] = vertices
         self._data['alpha'] = alpha
@@ -625,13 +632,13 @@ class _Brain(object):
             z=self.geo[hemi].coords[:, 2],
             triangles=self.geo[hemi].faces,
             normals=self.geo[hemi].nn,
+            polygon_offset=-2,
             **kwargs,
         )
         if isinstance(mesh_data, tuple):
             actor, mesh = mesh_data
             # add metadata to the mesh for picking
             mesh._hemi = hemi
-            self.resolve_coincident_topology(actor)
         else:
             actor, mesh = mesh_data, None
         return actor, mesh
@@ -644,6 +651,7 @@ class _Brain(object):
         self._update()
 
     def _add_volume_data(self, hemi, src, volume_options):
+        from ..backends._pyvista import _volume
         _validate_type(src, SourceSpaces, 'src')
         _check_option('src.kind', src.kind, ('volume',))
         _validate_type(
@@ -658,7 +666,10 @@ class _Brain(object):
             ['resolution', (None, 'numeric')],
             ['blending', (str,)],
             ['alpha', ('numeric', None)],
-            ['surface_alpha', (None, 'numeric')])
+            ['surface_alpha', (None, 'numeric')],
+            ['silhouette_alpha', (None, 'numeric')],
+            ['silhouette_linewidth', ('numeric',)],
+        )
         for key, types in allowed_types:
             _validate_type(volume_options[key], types,
                            f'volume_options[{repr(key)}]')
@@ -673,13 +684,18 @@ class _Brain(object):
         if alpha is None:
             alpha = 0.4 if self._data[hemi]['array'].ndim == 3 else 1.
         alpha = np.clip(float(alpha), 0., 1.)
-        surface_alpha = volume_options['surface_alpha']
         resolution = volume_options['resolution']
+        surface_alpha = volume_options['surface_alpha']
         if surface_alpha is None:
-            surface_alpha = min(alpha / 2., 0.4)
+            surface_alpha = min(alpha / 2., 0.1)
+        silhouette_alpha = volume_options['silhouette_alpha']
+        if silhouette_alpha is None:
+            silhouette_alpha = surface_alpha / 4.
+        silhouette_linewidth = volume_options['silhouette_linewidth']
         del volume_options
         volume_pos = self._data[hemi].get('grid_volume_pos')
         volume_neg = self._data[hemi].get('grid_volume_neg')
+        center = self._data['center']
         if volume_pos is None:
             xyz = np.meshgrid(
                 *[np.arange(s) for s in src[0]['shape']], indexing='ij')
@@ -696,17 +712,17 @@ class _Brain(object):
             vertices = self._data[hemi]['vertices']
             assert self._data[hemi]['array'].shape[0] == len(vertices)
             # MNE constructs the source space on a uniform grid in MRI space,
-            # but let's make sure
+            # but mne coreg can change it to be non-uniform, so we need to
+            # use all three elements here
             assert np.allclose(
-                src_mri_t[:3, :3], np.diag([src_mri_t[0, 0]] * 3))
+                src_mri_t[:3, :3], np.diag(np.diag(src_mri_t)[:3]))
             spacing = np.diag(src_mri_t)[:3]
             origin = src_mri_t[:3, 3] - spacing / 2.
             scalars = np.zeros(np.prod(dimensions))
             scalars[vertices] = 1.  # for the outer mesh
             grid, grid_mesh, volume_pos, volume_neg = \
-                self._add_volume_object(
-                    dimensions, origin, spacing, scalars, surface_alpha,
-                    resolution, blending)
+                _volume(dimensions, origin, spacing, scalars, surface_alpha,
+                        resolution, blending, center)
             self._data[hemi]['alpha'] = alpha  # incorrectly set earlier
             self._data[hemi]['grid'] = grid
             self._data[hemi]['grid_mesh'] = grid_mesh
@@ -724,75 +740,31 @@ class _Brain(object):
             actor_neg = None
         grid_mesh = self._data[hemi]['grid_mesh']
         if grid_mesh is not None:
+            import vtk
             _, prop = self._renderer.plotter.add_actor(
                 grid_mesh, reset_camera=False, name=None, culling=False,
                 pickable=False)
             prop.SetColor(*self._brain_color[:3])
             prop.SetOpacity(surface_alpha)
+            if silhouette_alpha > 0 and silhouette_linewidth > 0:
+                for ri, ci, v in self._iter_views('vol'):
+                    self._renderer.subplot(ri, ci)
+                    grid_silhouette = vtk.vtkPolyDataSilhouette()
+                    grid_silhouette.SetInputData(grid_mesh.GetInput())
+                    grid_silhouette.SetCamera(
+                        self._renderer.plotter.renderer.GetActiveCamera())
+                    grid_silhouette.SetEnableFeatureAngle(0)
+                    grid_silhouette_mapper = vtk.vtkPolyDataMapper()
+                    grid_silhouette_mapper.SetInputConnection(
+                        grid_silhouette.GetOutputPort())
+                    _, prop = self._renderer.plotter.add_actor(
+                        grid_silhouette_mapper, reset_camera=False, name=None,
+                        culling=False, pickable=False)
+                    prop.SetColor(*self._brain_color[:3])
+                    prop.SetOpacity(silhouette_alpha)
+                    prop.SetLineWidth(silhouette_linewidth)
+
         return actor_pos, actor_neg
-
-    def _add_volume_object(self, dimensions, origin, spacing, scalars,
-                           surface_alpha, resolution, blending):
-        # Now we can actually construct the visualization
-        import vtk
-        import pyvista as pv
-        grid = pv.UniformGrid()
-        grid.dimensions = dimensions + 1  # inject data on the cells
-        grid.origin = origin
-        grid.spacing = spacing
-        grid.cell_arrays['values'] = scalars
-
-        # Add contour of enclosed volume (use GetOutput instead of
-        # GetOutputPort below to avoid updating)
-        grid_alg = vtk.vtkCellDataToPointData()
-        grid_alg.SetInputDataObject(grid)
-        grid_alg.SetPassCellData(False)
-        grid_alg.Update()
-
-        if surface_alpha > 0:
-            grid_surface = vtk.vtkMarchingContourFilter()
-            grid_surface.ComputeNormalsOn()
-            grid_surface.ComputeScalarsOff()
-            grid_surface.SetInputData(grid_alg.GetOutput())
-            grid_surface.SetValue(0, 0.1)
-            grid_surface.Update()
-            grid_mesh = vtk.vtkPolyDataMapper()
-            grid_mesh.SetInputData(grid_surface.GetOutput())
-        else:
-            grid_mesh = None
-
-        mapper = vtk.vtkSmartVolumeMapper()
-        if resolution is None:  # native
-            mapper.SetScalarModeToUseCellData()
-            mapper.SetInputDataObject(grid)
-        else:
-            upsampler = vtk.vtkImageResample()
-            upsampler.SetInterpolationModeToNearestNeighbor()
-            upsampler.SetOutputSpacing(*([resolution] * 3))
-            upsampler.SetInputConnection(grid_alg.GetOutputPort())
-            mapper.SetInputConnection(upsampler.GetOutputPort())
-        # Additive, AverageIntensity, and Composite might also be reasonable
-        remap = dict(composite='Composite', mip='MaximumIntensity')
-        getattr(mapper, f'SetBlendModeTo{remap[blending]}')()
-        volume_pos = vtk.vtkVolume()
-        volume_pos.SetMapper(mapper)
-        dist = grid.length / (np.mean(grid.dimensions) - 1)
-        volume_pos.GetProperty().SetScalarOpacityUnitDistance(dist)
-        if self._data['center'] is not None and blending == 'mip':
-            # We need to create a minimum intensity projection for the neg half
-            mapper_neg = vtk.vtkSmartVolumeMapper()
-            if resolution is None:  # native
-                mapper_neg.SetScalarModeToUseCellData()
-                mapper_neg.SetInputDataObject(grid)
-            else:
-                mapper_neg.SetInputConnection(upsampler.GetOutputPort())
-            mapper_neg.SetBlendModeToMinimumIntensity()
-            volume_neg = vtk.vtkVolume()
-            volume_neg.SetMapper(mapper_neg)
-            volume_neg.GetProperty().SetScalarOpacityUnitDistance(dist)
-        else:
-            volume_neg = None
-        return grid, grid_mesh, volume_pos, volume_neg
 
     def add_label(self, label, color=None, alpha=1, scalar_thresh=None,
                   borders=False, hemi=None, subdir=None):
@@ -920,10 +892,8 @@ class _Brain(object):
                     color=None,
                     colormap=ctable,
                     backface_culling=False,
+                    polygon_offset=-2,
                 )
-                if isinstance(mesh_data, tuple):
-                    actor, _ = mesh_data
-                    self.resolve_coincident_topology(actor)
             self._label_data.append(mesh_data)
             self._renderer.set_camera(**views_dicts[hemi][v])
 
@@ -1132,6 +1102,7 @@ class _Brain(object):
                 vmax=np.max(ids),
                 scalars=ids,
                 interpolate_before_map=False,
+                polygon_offset=-2,
             )
             if isinstance(mesh_data, tuple):
                 from ..backends._pyvista import _set_colormap_range
@@ -1140,16 +1111,8 @@ class _Brain(object):
                 mesh._hemi = hemi
                 _set_colormap_range(actor, cmap.astype(np.uint8),
                                     None)
-                self.resolve_coincident_topology(actor)
 
         self._update()
-
-    def resolve_coincident_topology(self, actor):
-        """Resolve z-fighting of overlapping surfaces."""
-        mapper = actor.GetMapper()
-        mapper.SetResolveCoincidentTopologyToPolygonOffset()
-        mapper.SetRelativeCoincidentTopologyPolygonOffsetParameters(
-            -1., -1.)
 
     def close(self):
         """Close all figures and cleanup data structure."""
@@ -1181,6 +1144,13 @@ class _Brain(object):
         self._renderer.set_camera(**view)
         self._renderer.reset_camera()
         self._update()
+
+    def reset_view(self):
+        """Reset the camera."""
+        for h in self._hemis:
+            for ri, ci, v in self._iter_views(h):
+                self._renderer.subplot(ri, ci)
+                self._renderer.set_camera(**views_dicts[h][v])
 
     def save_image(self, filename, mode='rgb'):
         """Save view from all panels to disk.
@@ -1393,7 +1363,7 @@ class _Brain(object):
         self._update()
 
     def _update_glyphs(self, hemi, vectors):
-        from ..backends._pyvista import _set_colormap_range
+        from ..backends._pyvista import _set_colormap_range, _create_actor
         hemi_data = self._data.get(hemi)
         assert hemi_data is not None
         vertices = hemi_data['vertices']
@@ -1402,43 +1372,47 @@ class _Brain(object):
         vertices = slice(None) if vertices is None else vertices
         x, y, z = np.array(self.geo[hemi].coords)[vertices].T
 
-        if hemi_data['glyph_mesh'] is None:
+        if hemi_data['glyph_actor'] is None:
             add = True
-            hemi_data['glyph_mesh'] = list()
             hemi_data['glyph_actor'] = list()
         else:
             add = False
         count = 0
         for ri, ci, _ in self._iter_views(hemi):
             self._renderer.subplot(ri, ci)
-            polydata = self._renderer.quiver3d(
-                x, y, z,
-                vectors[:, 0], vectors[:, 1], vectors[:, 2],
-                color=None,
-                mode='2darrow',
-                scale_mode='vector',
-                scale=scale_factor,
-                opacity=vector_alpha,
-                name=str(hemi) + "_glyph"
+            if hemi_data['glyph_dataset'] is None:
+                glyph_mapper, glyph_dataset = self._renderer.quiver3d(
+                    x, y, z,
+                    vectors[:, 0], vectors[:, 1], vectors[:, 2],
+                    color=None,
+                    mode='2darrow',
+                    scale_mode='vector',
+                    scale=scale_factor,
+                    opacity=vector_alpha,
+                    name=str(hemi) + "_glyph"
+                )
+                hemi_data['glyph_dataset'] = glyph_dataset
+                hemi_data['glyph_mapper'] = glyph_mapper
+            else:
+                glyph_dataset = hemi_data['glyph_dataset']
+                glyph_dataset.point_arrays['vec'] = vectors
+                glyph_mapper = hemi_data['glyph_mapper']
+            if add:
+                glyph_actor = _create_actor(glyph_mapper)
+                prop = glyph_actor.GetProperty()
+                prop.SetLineWidth(2.)
+                prop.SetOpacity(vector_alpha)
+                self._renderer.plotter.add_actor(glyph_actor)
+                hemi_data['glyph_actor'].append(glyph_actor)
+            else:
+                glyph_actor = hemi_data['glyph_actor'][count]
+            count += 1
+            _set_colormap_range(
+                actor=glyph_actor,
+                ctable=self._data['ctable'],
+                scalar_bar=None,
+                rng=self._cmap_range,
             )
-            if polydata is not None:
-                if not add:
-                    glyph_actor = hemi_data['glyph_actor'][count]
-                    glyph_mesh = hemi_data['glyph_mesh'][count]
-                    glyph_mesh.shallow_copy(polydata)
-                else:
-                    glyph_actor, _ = self._renderer.polydata(polydata)
-                    assert not isinstance(glyph_actor, list)
-                    glyph_actor.VisibilityOff()
-                    glyph_actor.GetProperty().SetLineWidth(2.)
-                    hemi_data['glyph_mesh'].append(polydata)
-                    hemi_data['glyph_actor'].append(glyph_actor)
-                count += 1
-                ctable = self._data['ctable']
-                rng = self._cmap_range
-                _set_colormap_range(glyph_actor, ctable, None, rng)
-                # the glyphs are now ready to be displayed
-                glyph_actor.VisibilityOn()
 
     @property
     def _cmap_range(self):

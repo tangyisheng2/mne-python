@@ -7,6 +7,7 @@ from distutils.version import LooseVersion
 import gc
 import os
 import os.path as op
+from pathlib import Path
 import shutil
 import sys
 import warnings
@@ -27,6 +28,7 @@ except Exception:
 import numpy as np
 import mne
 from mne.datasets import testing
+from mne.utils import _pl
 
 test_path = testing.data_path(download=False)
 s_path = op.join(test_path, 'MEG', 'sample')
@@ -175,9 +177,9 @@ def matplotlib_config():
 
 
 @pytest.fixture(scope='session')
-def travis_macos():
-    """Determine if running on Travis macOS."""
-    return (os.getenv('TRAVIS', 'false').lower() == 'true' and
+def ci_macos():
+    """Determine if running on MacOS CI."""
+    return (os.getenv('CI', 'false').lower() == 'true' and
             sys.platform == 'darwin')
 
 
@@ -189,10 +191,10 @@ def azure_windows():
 
 
 @pytest.fixture()
-def check_gui_ci(travis_macos, azure_windows):
+def check_gui_ci(ci_macos, azure_windows):
     """Skip tests that are not reliable on CIs."""
-    if azure_windows or travis_macos:
-        pytest.skip('Skipping GUI tests on Travis OSX and Azure Windows')
+    if azure_windows or ci_macos:
+        pytest.skip('Skipping GUI tests on MacOS CIs and Azure Windows')
 
 
 @pytest.fixture(scope='session', params=[testing._pytest_param()])
@@ -457,3 +459,52 @@ def src_volume_labels():
     assert volume_labels[0] == 'Unknown'
     assert lut['Unknown'] == 0  # it will be excluded during label gen
     return src, tuple(volume_labels), lut
+
+
+def _fail(*args, **kwargs):
+    raise AssertionError('Test should not download')
+
+
+@pytest.fixture(scope='function')
+def download_is_error(monkeypatch):
+    """Prevent downloading by raising an error when it's attempted."""
+    monkeypatch.setattr(mne.utils.fetching, '_get_http', _fail)
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Handle the end of the session."""
+    n = session.config.option.durations
+    if n is None:
+        return
+    try:
+        import pytest_harvest
+    except ImportError:
+        print('Module-level timings require pytest-harvest')
+        return
+    from py.io import TerminalWriter
+    # get the number to print
+    res = pytest_harvest.get_session_synthesis_dct(session)
+    files = dict()
+    for key, val in res.items():
+        parts = Path(key.split(':')[0]).parts
+        # split mne/tests/test_whatever.py into separate categories since these
+        # are essentially submodule-level tests. Keeping just [:3] works,
+        # except for mne/viz where we want level-4 granulatity
+        parts = parts[:4 if parts[:2] == ('mne', 'viz') else 3]
+        if not parts[-1].endswith('.py'):
+            parts = parts + ('',)
+        file_key = '/'.join(parts)
+        files[file_key] = files.get(file_key, 0) + val['pytest_duration_s']
+    files = sorted(list(files.items()), key=lambda x: x[1])[::-1]
+    # print
+    files = files[:n]
+    if len(files):
+        writer = TerminalWriter()
+        writer.line()  # newline
+        writer.sep('=', f'slowest {n} test module{_pl(n)}')
+        names, timings = zip(*files)
+        timings = [f'{timing:0.2f}s total' for timing in timings]
+        rjust = max(len(timing) for timing in timings)
+        timings = [timing.rjust(rjust) for timing in timings]
+        for name, timing in zip(names, timings):
+            writer.line(f'{timing.ljust(15)}{name}')

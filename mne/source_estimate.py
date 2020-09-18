@@ -30,7 +30,8 @@ from .utils import (get_subjects_dir, _check_subject, logger, verbose, _pl,
                     fill_doc, _check_option, _validate_type, _check_src_normal,
                     _check_stc_units, _check_pandas_installed, deprecated,
                     _check_pandas_index_arguments, _convert_times, _ensure_int,
-                    _build_data_frame, _check_time_format, _check_path_like)
+                    _build_data_frame, _check_time_format, _check_path_like,
+                    sizeof_fmt, object_size)
 from .viz import (plot_source_estimates, plot_vector_source_estimates,
                   plot_volume_source_estimates)
 from .io.base import TimeMixin
@@ -523,6 +524,8 @@ class _BaseSourceEstimate(TimeMixin):
         s += ", tmax : %s (ms)" % (1e3 * self.times[-1])
         s += ", tstep : %s (ms)" % (1e3 * self.tstep)
         s += ", data shape : %s" % (self.shape,)
+        sz = sum(object_size(x) for x in (self.vertices + [self.data]))
+        s += f", ~{sizeof_fmt(sz)}"
         return "<%s | %s>" % (type(self).__name__, s)
 
     @fill_doc
@@ -1934,7 +1937,7 @@ class _BaseVolSourceEstimate(_BaseSourceEstimate):
     @copy_function_doc_to_method_doc(plot_source_estimates)
     def plot_3d(self, subject=None, surface='white', hemi='both',
                 colormap='auto', time_label='auto', smoothing_steps=10,
-                transparent=True, alpha=0.2, time_viewer='auto',
+                transparent=True, alpha=0.1, time_viewer='auto',
                 subjects_dir=None,
                 figure=None, views='axial', colorbar=True, clim='auto',
                 cortex="classic", size=800, background="black",
@@ -2195,6 +2198,9 @@ class VolSourceEstimate(_BaseVolSourceEstimate):
         if ftype != 'h5' and len(self.vertices) != 1:
             raise ValueError('Can only write to .stc or .w if a single volume '
                              'source space was used, use .h5 instead')
+        if ftype != 'h5' and self.data.dtype == 'complex':
+            raise ValueError('Can only write non-complex data to .stc or .w'
+                             ', use .h5 instead')
         if ftype == 'stc':
             logger.info('Writing STC to disk...')
             if not (fname.endswith('-vl.stc') or fname.endswith('-vol.stc')):
@@ -2931,35 +2937,48 @@ def _temporary_vertices(src, vertices):
 
 def _prepare_label_extraction(stc, labels, src, mode, allow_empty, use_sparse):
     """Prepare indices and flips for extract_label_time_course."""
-    # if src is a mixed src space, the first 2 src spaces are surf type and
-    # the other ones are vol type. For mixed source space n_labels will be the
+    # If src is a mixed src space, the first 2 src spaces are surf type and
+    # the other ones are vol type. For mixed source space n_labels will be
     # given by the number of ROIs of the cortical parcellation plus the number
-    # of vol src space
+    # of vol src space.
+    # If stc=None (i.e. no activation time courses provided) and mode='mean',
+    # only computes vertex indices and label_flip will be list of None.
     from .label import label_sign_flip, Label, BiHemiLabel
 
-    # get vertices from source space, they have to be the same as in the stcs
-    vertno = stc.vertices
+    # if source estimate provided in stc, get vertices from source space and
+    # check that they are the same as in the stcs
+    if stc is not None:
+        vertno = stc.vertices
+
+        for s, v, hemi in zip(src, stc.vertices, ('left', 'right')):
+            n_missing = (~np.in1d(v, s['vertno'])).sum()
+            if n_missing:
+                raise ValueError('%d/%d %s hemisphere stc vertices missing '
+                                 'from the source space, likely mismatch'
+                                 % (n_missing, len(v), hemi))
+    else:
+        vertno = [s['vertno'] for s in src]
+
     nvert = [len(vn) for vn in vertno]
 
-    # do the initialization
-    label_vertidx = list()
+    # initialization
     label_flip = list()
-    for s, v, hemi in zip(src, stc.vertices, ('left', 'right')):
-        n_missing = (~np.in1d(v, s['vertno'])).sum()
-        if n_missing:
-            raise ValueError('%d/%d %s hemisphere stc vertices missing from '
-                             'the source space, likely mismatch'
-                             % (n_missing, len(v), hemi))
+    label_vertidx = list()
+
     bad_labels = list()
     for li, label in enumerate(labels):
         if use_sparse:
             assert isinstance(label, dict)
+            vertidx = label['csr']
             # This can happen if some labels aren't present in the space
-            if label['csr'].shape[0] == 0:
+            if vertidx.shape[0] == 0:
                 bad_labels.append(label['name'])
-                label_vertidx.append(None)
-            else:
-                label_vertidx.append(label['csr'])
+                vertidx = None
+            # Efficiency shortcut: use linearity early to avoid redundant
+            # calculations
+            elif mode == 'mean':
+                vertidx = sparse.csr_matrix(vertidx.mean(axis=0))
+            label_vertidx.append(vertidx)
             label_flip.append(None)
             continue
         # standard case
@@ -3037,12 +3056,14 @@ def _volume_labels(src, labels, trans, mri_resolution):
         _validate_type(mri, 'path-like', 'labels[0]' + extra)
     logger.info('Reading atlas %s' % (mri,))
     vol_info = _get_mri_info_data(str(mri), data=True)
-    atlas_values = np.unique(vol_info['data'])
-    atlas_values = atlas_values[np.isfinite(atlas_values)]
-    if not (atlas_values == np.round(atlas_values)).all():
-        raise RuntimeError('Non-integer values present in atlas, cannot '
-                           'labelize')
-    atlas_values = np.round(atlas_values).astype(np.int64)
+    atlas_data = vol_info['data']
+    atlas_values = np.unique(atlas_data)
+    if atlas_values.dtype.kind == 'f':  # MGZ will be 'i'
+        atlas_values = atlas_values[np.isfinite(atlas_values)]
+        if not (atlas_values == np.round(atlas_values)).all():
+            raise RuntimeError('Non-integer values present in atlas, cannot '
+                               'labelize')
+        atlas_values = np.round(atlas_values).astype(np.int64)
     if infer_labels:
         labels = {
             k: v for k, v in read_freesurfer_lut()[0].items()
@@ -3063,10 +3084,11 @@ def _volume_labels(src, labels, trans, mri_resolution):
             'atlas vox_mri_t does not match that used to create the source '
             'space')
     src_shape = tuple(src[0]['mri_' + k] for k in ('width', 'height', 'depth'))
-    atlas_shape = vol_info['data'].shape
+    atlas_shape = atlas_data.shape
     if atlas_shape != src_shape:
         raise RuntimeError('atlas shape %s does not match source space MRI '
                            'shape %s' % (atlas_shape, src_shape))
+    atlas_data = atlas_data.ravel(order='F')
     if mri_resolution:
         # Upsample then just index
         out_labels = list()
@@ -3074,10 +3096,10 @@ def _volume_labels(src, labels, trans, mri_resolution):
         interp = src[0]['interpolator']
         # should be guaranteed by size checks above and our src interp code
         assert interp.shape[0] == np.prod(src_shape)
-        assert interp.shape == (vol_info['data'].size, len(src[0]['rr']))
+        assert interp.shape == (atlas_data.size, len(src[0]['rr']))
         interp = interp[:, src[0]['vertno']]
         for k, v in labels.items():
-            mask = vol_info['data'].ravel(order='F') == v
+            mask = atlas_data == v
             csr = interp[mask]
             out_labels.append(dict(csr=csr, name=k))
             nnz += csr.shape[0] > 0
@@ -3162,7 +3184,7 @@ def _gen_extract_label_time_course(stcs, labels, src, mode='mean',
                     assert mri_resolution
                     assert vertidx.shape[1] == stc.data.shape[0]
                     this_data = np.reshape(stc.data, (stc.data.shape[0], -1))
-                    this_data = vertidx * this_data
+                    this_data = vertidx @ this_data
                     this_data.shape = \
                         (this_data.shape[0],) + stc.data.shape[1:]
                 else:

@@ -53,7 +53,8 @@ from .utils import (_check_fname, check_fname, logger, verbose,
                     _check_event_id, _gen_events, _check_option,
                     _check_combine, ShiftTimeMixin, _build_data_frame,
                     _check_pandas_index_arguments, _convert_times,
-                    _scale_dataframe_data, _check_time_format, object_size)
+                    _scale_dataframe_data, _check_time_format, object_size,
+                    _on_missing)
 from .utils.docs import fill_doc
 from .viz import (plot_epochs, plot_epochs_psd, plot_epochs_psd_topomap,
                   plot_epochs_image, plot_topo_image_epochs, plot_drop_log, calculate_epochs_psd)
@@ -380,13 +381,11 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
     def __init__(self, info, data, events, event_id=None, tmin=-0.2, tmax=0.5,
                  baseline=(None, 0), raw=None, picks=None, reject=None,
                  flat=None, decim=1, reject_tmin=None, reject_tmax=None,
-                 detrend=None, proj=True, on_missing='error',
+                 detrend=None, proj=True, on_missing='raise',
                  preload_at_end=False, selection=None, drop_log=None,
                  filename=None, metadata=None, event_repeated='error',
                  verbose=None):  # noqa: D102
         self.verbose = verbose
-
-        _check_option('on_missing', on_missing, ['error', 'warning', 'ignore'])
 
         if events is not None:  # RtEpochs can have events=None
             events_type = type(events)
@@ -408,12 +407,7 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
                 if val not in events[:, 2]:
                     msg = ('No matching events found for %s '
                            '(event id %i)' % (key, val))
-                    if on_missing == 'error':
-                        raise ValueError(msg)
-                    elif on_missing == 'warning':
-                        warn(msg)
-                    else:  # on_missing == 'ignore':
-                        pass
+                    _on_missing(on_missing, msg)
 
             # ensure metadata matches original events size
             self.selection = np.arange(len(events))
@@ -593,19 +587,10 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
     def decimate(self, decim, offset=0, verbose=None):
         """Decimate the epochs.
 
-        .. note:: No filtering is performed. To avoid aliasing, ensure
-                  your data are properly lowpassed.
-
         Parameters
         ----------
-        decim : int
-            The amount to decimate data.
-        offset : int
-            Apply an offset to where the decimation starts relative to the
-            sample corresponding to t=0. The offset is in samples at the
-            current sampling rate.
-
-            .. versionadded:: 0.12
+        %(decim)s
+        %(decim_offset)s
         %(verbose_meth)s
 
         Returns
@@ -621,12 +606,15 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
 
         Notes
         -----
-        Decimation can be done multiple times. For example,
-        ``epochs.decimate(2).decimate(2)`` will be the same as
-        ``epochs.decimate(4)``.
+        %(decim_notes)s
+
         If ``decim`` is 1, this method does not copy the underlying data.
 
         .. versionadded:: 0.10.0
+
+        References
+        ----------
+        .. footbibliography::
         """
         decim, offset, new_sfreq = _check_decim(self.info, decim, offset)
         start_idx = int(round(-self._raw_times[0] * (self.info['sfreq'] *
@@ -1503,8 +1491,8 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
         class_name = 'Epochs' if class_name == 'BaseEpochs' else class_name
         return '<%s | %s>' % (class_name, s)
 
-    @fill_doc
-    def crop(self, tmin=None, tmax=None, include_tmax=True):
+    @verbose
+    def crop(self, tmin=None, tmax=None, include_tmax=True, verbose=None):
         """Crop a time interval from the epochs.
 
         Parameters
@@ -1514,6 +1502,7 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
         tmax : float | None
             End time of selection in seconds.
         %(include_tmax)s
+        %(verbose_meth)s
 
         Returns
         -------
@@ -1996,10 +1985,7 @@ class Epochs(BaseEpochs):
         detrending and temporal decimation will be postponed.
         If proj is False no projections will be applied which is the
         recommended value if SSPs are not used for cleaning the data.
-    decim : int
-        Factor by which to downsample the data from the raw file upon import.
-        Warning: This simply selects every nth sample, data is not filtered
-        here. If data is not properly filtered, aliasing artifacts may occur.
+    %(decim)s
     reject_tmin : scalar | None
         Start of the time window used to reject epochs (with the default None,
         the window will start with tmin).
@@ -2016,8 +2002,8 @@ class Epochs(BaseEpochs):
         (will yield equivalent results but be slower).
     on_missing : str
         What to do if one or several event ids are not found in the recording.
-        Valid keys are 'error' | 'warning' | 'ignore'
-        Default is 'error'. If on_missing is 'warning' it will proceed but
+        Valid keys are 'raise' | 'warn' | 'ignore'
+        Default is 'raise'. If on_missing is 'warn' it will proceed but
         warn, if 'ignore' it will proceed silently. Note.
         If none of the event ids are found in the data, an error will be
         automatically generated irrespective of this parameter.
@@ -2111,7 +2097,7 @@ class Epochs(BaseEpochs):
     def __init__(self, raw, events, event_id=None, tmin=-0.2, tmax=0.5,
                  baseline=(None, 0), picks=None, preload=False, reject=None,
                  flat=None, proj=True, decim=1, reject_tmin=None,
-                 reject_tmax=None, detrend=None, on_missing='error',
+                 reject_tmax=None, detrend=None, on_missing='raise',
                  reject_by_annotation=True, metadata=None,
                  event_repeated='error', verbose=None):  # noqa: D102
         if not isinstance(raw, BaseRaw):
@@ -2266,7 +2252,7 @@ class EpochsArray(BaseEpochs):
     def __init__(self, data, info, events=None, tmin=0, event_id=None,
                  reject=None, flat=None, reject_tmin=None,
                  reject_tmax=None, baseline=None, proj=True,
-                 on_missing='error', metadata=None, selection=None,
+                 on_missing='raise', metadata=None, selection=None,
                  verbose=None):  # noqa: D102
         dtype = np.complex128 if np.any(np.iscomplex(data)) else np.float64
         data = np.asanyarray(data, dtype=dtype)
@@ -2971,7 +2957,10 @@ def _concatenate_epochs(epochs_list, with_data=True, add_offset=True):
             raise TypeError('epochs_list[%d] must be an instance of Epochs, '
                             'got %s' % (ei, type(epochs)))
     out = epochs_list[0]
-    data = [out.get_data()] if with_data else None
+    offsets = [0]
+    if with_data:
+        out.drop_bad()
+        offsets.append(len(out))
     events = [out.events]
     metadata = [out.metadata]
     baseline, tmin, tmax = out.baseline, out.tmin, out.tmax
@@ -2983,7 +2972,7 @@ def _concatenate_epochs(epochs_list, with_data=True, add_offset=True):
     # offset is the last epoch + tmax + 10 second
     events_offset = (np.max(out.events[:, 0]) +
                      int((10 + tmax) * epochs.info['sfreq']))
-    for ii, epochs in enumerate(epochs_list[1:]):
+    for ii, epochs in enumerate(epochs_list[1:], 1):
         _compare_epochs_infos(epochs.info, info, ii)
         if not np.allclose(epochs.times, epochs_list[0].times):
             raise ValueError('Epochs must have same times')
@@ -3002,7 +2991,8 @@ def _concatenate_epochs(epochs_list, with_data=True, add_offset=True):
                                             epochs.event_id[key]))
 
         if with_data:
-            data.append(epochs.get_data())
+            epochs.drop_bad()
+            offsets.append(len(epochs))
         evs = epochs.events.copy()
         # add offset
         if add_offset:
@@ -3032,8 +3022,17 @@ def _concatenate_epochs(epochs_list, with_data=True, add_offset=True):
             metadata = pd.concat(metadata)
         else:  # dict of dicts
             metadata = sum(metadata, list())
+    assert len(offsets) == (len(epochs_list) if with_data else 0) + 1
+    data = None
     if with_data:
-        data = np.concatenate(data, axis=0)
+        offsets = np.cumsum(offsets)
+        for start, stop, epochs in zip(offsets[:-1], offsets[1:], epochs_list):
+            this_data = epochs.get_data()
+            if data is None:
+                data = np.empty(
+                    (offsets[-1], len(out.ch_names), len(out.times)),
+                    dtype=this_data.dtype)
+            data[start:stop] = this_data
     return (info, data, events, event_id, tmin, tmax, metadata, baseline,
             selection, drop_log, verbose)
 
@@ -3087,59 +3086,27 @@ def average_movements(epochs, head_pos=None, orig_sfreq=None, picks=None,
     ----------
     epochs : instance of Epochs
         The epochs to operate on.
-    head_pos : array | tuple | None
-        The array should be of shape ``(N, 10)``, holding the position
-        parameters as returned by e.g. ``read_head_pos``. For backward
-        compatibility, this can also be a tuple of ``(trans, rot t)``
-        as returned by ``head_pos_to_trans_rot_t``.
+    %(maxwell_pos)s
     orig_sfreq : float | None
         The original sample frequency of the data (that matches the
         event sample numbers in ``epochs.events``). Can be ``None``
         if data have not been decimated or resampled.
     %(picks_all_data)s
-    origin : array-like, shape (3,) | str
-        Origin of internal and external multipolar moment space in head
-        coords and in meters. The default is ``'auto'``, which means
-        a head-digitization-based origin fit.
+    %(maxwell_origin)s
     weight_all : bool
         If True, all channels are weighted by the SSS basis weights.
         If False, only MEG channels are weighted, other channels
         receive uniform weight per epoch.
-    int_order : int
-        Order of internal component of spherical expansion.
-    ext_order : int
-        Order of external component of spherical expansion.
-    regularize : str | None
-        Basis regularization type, must be "in" or None.
-        See :func:`mne.preprocessing.maxwell_filter` for details.
-        Regularization is chosen based only on the destination position.
-    destination : str | array-like, shape (3,) | None
-        The destination location for the head. Can be ``None``, which
-        will not change the head position, or a string path to a FIF file
-        containing a MEG device<->head transformation, or a 3-element array
-        giving the coordinates to translate to (with no rotations).
-        For example, ``destination=(0, 0, 0.04)`` would translate the bases
-        as ``--trans default`` would in MaxFilter™ (i.e., to the default
-        head location).
-
-        .. versionadded:: 0.12
-
-    ignore_ref : bool
-        If True, do not include reference channels in compensation. This
-        option should be True for KIT files, since Maxwell filtering
-        with reference channels is not currently supported.
+    %(maxwell_int)s
+    %(maxwell_ext)s
+    %(maxwell_reg)s
+    %(maxwell_dest)s
+    %(maxwell_ref)s
     return_mapping : bool
         If True, return the mapping matrix.
-    mag_scale : float | str
-        The magenetometer scale-factor used to bring the magnetometers
-        to approximately the same order of magnitude as the gradiometers
-        (default 100.), as they have different units (T vs T/m).
-        Can be ``'auto'`` to use the reciprocal of the physical distance
-        between the gradiometer pickup loops (e.g., 0.0168 m yields
-        59.5 for VectorView).
+    %(maxwell_mag)s
 
         .. versionadded:: 0.13
-
     %(verbose)s
 
     Returns

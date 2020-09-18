@@ -449,6 +449,7 @@ class Resetter(object):
         # turn it off here (otherwise the build can be very slow)
         plt.ioff()
         gc.collect()
+        plt.rcParams['animation.embed_limit'] = 30.
 
 
 def reset_warnings(gallery_conf, fname):
@@ -652,10 +653,11 @@ numpydoc_xref_ignore = {
     'nd_features', 'n_classes', 'n_targets', 'n_slices', 'n_hpi', 'n_fids',
     'n_elp', 'n_pts', 'n_tris', 'n_nodes', 'n_nonzero', 'n_events_out',
     'n_segments', 'n_orient_inv', 'n_orient_fwd', 'n_orient', 'n_dipoles_lcmv',
-    'n_dipoles_fwd',
+    'n_dipoles_fwd', 'n_picks_ref',
     # Undocumented (on purpose)
     'RawKIT', 'RawEximia', 'RawEGI', 'RawEEGLAB', 'RawEDF', 'RawCTF', 'RawBTi',
     'RawBrainVision', 'RawCurry', 'RawNIRX', 'RawGDF', 'RawSNIRF',
+    'RawPersyst', 'RawNihon',
     # sklearn subclasses
     'mapping', 'to', 'any',
     # unlinkable

@@ -1091,10 +1091,10 @@ def scale_source_space(subject_to, src_name, subject_from=None, scale=None,
         ss['subject_his_id'] = subject_to
         ss['rr'] *= scale
         # additional tags for volume source spaces
-        if 'vox_mri_t' in ss:
+        for key in ('vox_mri_t', 'src_mri_t'):
             # maintain transform to original MRI volume ss['mri_volume_name']
-            ss['vox_mri_t']['trans'][:3, :3] /= scale
-            ss['src_mri_t']['trans'][:3, :3] /= scale
+            if key in ss:
+                ss[key]['trans'][:3] *= scale[:, np.newaxis]
         # distances and patch info
         if uniform:
             if ss['dist'] is not None:
@@ -1236,7 +1236,8 @@ def get_mni_fiducials(subject, subjects_dir=None, verbose=None):
     Returns
     -------
     fids_mri : list
-        List of estimated fiducials (each point in a dict)
+        List of estimated fiducials (each point in a dict), in the order
+        LPA, nasion, RPA.
 
     Notes
     -----

@@ -34,7 +34,8 @@ from .surface import (read_surface, _create_surf_spacing, _get_ico_surface,
 from .utils import (get_subjects_dir, check_fname, logger, verbose,
                     _ensure_int, check_version, _get_call_line, warn,
                     _check_fname, _check_path_like, has_nibabel, _check_sphere,
-                    _validate_type, _check_option, _is_numeric, _pl, _suggest)
+                    _validate_type, _check_option, _is_numeric, _pl, _suggest,
+                    object_size, sizeof_fmt)
 from .parallel import parallel_func, check_n_jobs
 from .transforms import (invert_transform, apply_trans, _print_coord_trans,
                          combine_transforms, _get_trans,
@@ -70,9 +71,23 @@ def _get_lut(fname=None):
     _validate_type(fname, ('path-like', None), 'fname')
     if fname is None:
         fname = op.join(op.dirname(__file__), 'data', 'FreeSurferColorLUT.txt')
-    dtype = [('id', '<i8'), ('name', 'U47'),
+    _check_fname(fname, 'read', must_exist=True)
+    dtype = [('id', '<i8'), ('name', 'U'),
              ('R', '<i8'), ('G', '<i8'), ('B', '<i8'), ('A', '<i8')]
-    return np.genfromtxt(fname, dtype=dtype)
+    lut = {d[0]: list() for d in dtype}
+    with open(fname, 'r') as fid:
+        for line in fid:
+            line = line.strip()
+            if line.startswith('#') or not line:
+                continue
+            line = line.split()
+            if len(line) != len(dtype):
+                raise RuntimeError(f'LUT is improperly formatted: {fname}')
+            for d, part in zip(dtype, line):
+                lut[d[0]].append(part)
+    lut = {d[0]: np.array(lut[d[0]], dtype=d[1]) for d in dtype}
+    assert len(lut['name']) > 0
+    return lut
 
 
 def _get_lut_id(lut, label):
@@ -264,6 +279,9 @@ class SourceSpaces(list):
         subj = self._subject
         if subj is not None:
             extra += ['subject %r' % (subj,)]
+        sz = object_size(self)
+        if sz is not None:
+            extra += [f'~{sizeof_fmt(sz)}']
         return "<SourceSpaces: [%s] %s>" % (
             ', '.join(ss_repr), ', '.join(extra))
 
@@ -678,9 +696,6 @@ def read_source_spaces(fname, patch_stats=False, verbose=None):
 
 def _read_one_source_space(fid, this):
     """Read one source space."""
-    FIFF_BEM_SURF_NTRI = 3104
-    FIFF_BEM_SURF_TRIANGLES = 3106
-
     res = dict()
 
     tag = find_tag(fid, this, FIFF.FIFF_MNE_SOURCE_SPACE_ID)
@@ -782,7 +797,7 @@ def _read_one_source_space(fid, this):
 
     res['np'] = int(tag.data)
 
-    tag = find_tag(fid, this, FIFF_BEM_SURF_NTRI)
+    tag = find_tag(fid, this, FIFF.FIFF_BEM_SURF_NTRI)
     if tag is None:
         tag = find_tag(fid, this, FIFF.FIFF_MNE_SOURCE_SPACE_NTRI)
         if tag is None:
@@ -816,7 +831,7 @@ def _read_one_source_space(fid, this):
         raise ValueError('Vertex normal information is incorrect')
 
     if res['ntri'] > 0:
-        tag = find_tag(fid, this, FIFF_BEM_SURF_TRIANGLES)
+        tag = find_tag(fid, this, FIFF.FIFF_BEM_SURF_TRIANGLES)
         if tag is None:
             tag = find_tag(fid, this, FIFF.FIFF_MNE_SOURCE_SPACE_TRIANGLES)
             if tag is None:
@@ -1958,7 +1973,7 @@ def _get_mri_info_data(mri, data):
     if data:
         assert mgz is not None
         out['mri_vox_t'] = invert_transform(out['vox_mri_t'])
-        out['data'] = _get_img_fdata(mgz)
+        out['data'] = np.asarray(mgz.dataobj)
     return out
 
 
@@ -2673,7 +2688,8 @@ def get_volume_labels_from_aseg(mgz_fname, return_colors=False,
     """
     import nibabel as nib
     atlas = nib.load(mgz_fname)
-    want = np.unique(_get_img_fdata(atlas))
+    data = np.asarray(atlas.dataobj)  # don't need float here
+    want = np.unique(data)
     if atlas_ids is None:
         atlas_ids, colors = read_freesurfer_lut()
     elif return_colors:
