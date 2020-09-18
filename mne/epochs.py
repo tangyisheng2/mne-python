@@ -11,42 +11,40 @@
 #
 # License: BSD (3-clause)
 
-from collections import Counter
-from copy import deepcopy
 import json
 import operator
 import os.path as op
 import warnings
+from collections import Counter
+from copy import deepcopy
 
 import numpy as np
 
-from .io.write import (start_file, start_block, end_file, end_block,
-                       write_int, write_float, write_float_matrix,
-                       write_double_matrix, write_complex_float_matrix,
-                       write_complex_double_matrix, write_id, write_string,
-                       _get_split_size, _NEXT_FILE_BUFFER)
-from .io.meas_info import read_meas_info, write_meas_info, _merge_info
-from .io.open import fiff_open, _get_next_fname
-from .io.tree import dir_tree_find
-from .io.tag import read_tag, read_tag_info
+from .baseline import rescale, _log_rescale
+from .bem import _check_origin
+from .channels.channels import (ContainsMixin, UpdateChannelsMixin,
+                                SetChannelsMixin, InterpolationMixin)
+from .event import _read_events_fif, make_fixed_length_events
+from .evoked import EvokedArray, _check_decim
+from .filter import detrend, FilterMixin
+from .fixes import _get_args, rng_uniform
+from .io.base import BaseRaw, TimeMixin
 from .io.constants import FIFF
 from .io.fiff.raw import _get_fname_rep
+from .io.meas_info import read_meas_info, write_meas_info, _merge_info
+from .io.open import fiff_open, _get_next_fname
 from .io.pick import (pick_types, channel_indices_by_type, channel_type,
                       pick_channels, pick_info, _pick_data_channels,
                       _pick_aux_channels, _DATA_CH_TYPES_SPLIT,
                       _picks_to_idx)
 from .io.proj import setup_proj, ProjMixin, _proj_equal
-from .io.base import BaseRaw, TimeMixin
-from .bem import _check_origin
-from .evoked import EvokedArray, _check_decim
-from .baseline import rescale, _log_rescale
-from .channels.channels import (ContainsMixin, UpdateChannelsMixin,
-                                SetChannelsMixin, InterpolationMixin)
-from .filter import detrend, FilterMixin
-from .event import _read_events_fif, make_fixed_length_events
-from .fixes import _get_args, rng_uniform
-from .viz import (plot_epochs, plot_epochs_psd, plot_epochs_psd_topomap,
-                  plot_epochs_image, plot_topo_image_epochs, plot_drop_log)
+from .io.tag import read_tag, read_tag_info
+from .io.tree import dir_tree_find
+from .io.write import (start_file, start_block, end_file, end_block,
+                       write_int, write_float, write_float_matrix,
+                       write_double_matrix, write_complex_float_matrix,
+                       write_complex_double_matrix, write_id, write_string,
+                       _get_split_size, _NEXT_FILE_BUFFER)
 from .utils import (_check_fname, check_fname, logger, verbose,
                     _time_mask, check_random_state, warn, _pl,
                     sizeof_fmt, SizeMixin, copy_function_doc_to_method_doc,
@@ -57,6 +55,8 @@ from .utils import (_check_fname, check_fname, logger, verbose,
                     _check_pandas_index_arguments, _convert_times,
                     _scale_dataframe_data, _check_time_format, object_size)
 from .utils.docs import fill_doc
+from .viz import (plot_epochs, plot_epochs_psd, plot_epochs_psd_topomap,
+                  plot_epochs_image, plot_topo_image_epochs, plot_drop_log, calculate_epochs_psd)
 
 
 def _pack_reject_params(epochs):
@@ -1101,6 +1101,25 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
                                line_alpha=line_alpha,
                                spatial_colors=spatial_colors, sphere=sphere,
                                verbose=verbose)
+
+    @copy_function_doc_to_method_doc(plot_epochs_psd)
+    def calculate_psd(self, fmin=0, fmax=np.inf, tmin=None, tmax=None,
+                      proj=False, bandwidth=None, adaptive=False, low_bias=True,
+                      normalization='length', picks=None, ax=None, color='black',
+                      xscale='linear', area_mode='std', area_alpha=0.33,
+                      dB=True, estimate='auto', show=True, n_jobs=1,
+                      average=False, line_alpha=None, spatial_colors=True,
+                      sphere=None, verbose=None):
+        return calculate_epochs_psd(self, fmin=fmin, fmax=fmax, tmin=tmin,
+                                    tmax=tmax, proj=proj, bandwidth=bandwidth,
+                                    adaptive=adaptive, low_bias=low_bias,
+                                    normalization=normalization, picks=picks, ax=ax,
+                                    color=color, xscale=xscale, area_mode=area_mode,
+                                    area_alpha=area_alpha, dB=dB, estimate=estimate,
+                                    show=show, n_jobs=n_jobs, average=average,
+                                    line_alpha=line_alpha,
+                                    spatial_colors=spatial_colors, sphere=sphere,
+                                    verbose=verbose)
 
     @copy_function_doc_to_method_doc(plot_epochs_psd_topomap)
     def plot_psd_topomap(self, bands=None, vmin=None, vmax=None, tmin=None,

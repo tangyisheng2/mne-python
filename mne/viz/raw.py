@@ -11,13 +11,6 @@ from functools import partial
 
 import numpy as np
 
-from ..annotations import _annotations_starts_stops
-from ..filter import create_filter, _overlap_add_filter, _filtfilt
-from ..io.pick import (pick_types, _pick_data_channels, pick_info,
-                       _PICK_TYPES_KEYS, pick_channels)
-from ..utils import verbose, _ensure_int, _validate_type, _check_option
-from ..time_frequency import psd_welch
-from ..defaults import _handle_default
 from .topo import _plot_topo, _plot_timeseries, _plot_timeseries_unified
 from .utils import (_toggle_options, _toggle_proj, _prepare_mne_browse,
                     _plot_raw_onkey, figure_nobar, plt_show,
@@ -29,6 +22,13 @@ from .utils import (_toggle_options, _toggle_proj, _prepare_mne_browse,
                     _handle_decim, _setup_plot_projector, _check_cov,
                     _set_ax_label_style, _draw_vert_line, _simplify_float,
                     _check_psd_fmax, _set_window_title)
+from ..annotations import _annotations_starts_stops
+from ..defaults import _handle_default
+from ..filter import create_filter, _overlap_add_filter, _filtfilt
+from ..io.pick import (pick_types, _pick_data_channels, pick_info,
+                       _PICK_TYPES_KEYS, pick_channels)
+from ..time_frequency import psd_welch
+from ..utils import verbose, _ensure_int, _validate_type, _check_option
 
 
 def _plot_update_raw_proj(params, bools):
@@ -629,8 +629,8 @@ def plot_raw_psd(raw, fmin=0, fmax=np.inf, tmin=None, tmax=None, proj=False,
     """
     from .utils import _set_psd_plot_params, _plot_psd
     fig, picks_list, titles_list, units_list, scalings_list, ax_list, \
-        make_label, xlabels_list = _set_psd_plot_params(
-            raw.info, proj, picks, ax, area_mode)
+    make_label, xlabels_list = _set_psd_plot_params(
+        raw.info, proj, picks, ax, area_mode)
     _check_psd_fmax(raw, fmax)
     del ax
     psd_list = list()
@@ -651,6 +651,80 @@ def plot_raw_psd(raw, fmin=0, fmax=np.inf, tmin=None, tmax=None, proj=False,
                     spatial_colors, xscale, line_alpha, sphere, xlabels_list)
     plt_show(show)
     return fig
+
+
+@verbose
+def calculate_raw_psd(raw, fmin=0, fmax=np.inf, tmin=None, tmax=None, proj=False,
+                      n_fft=None, n_overlap=0, reject_by_annotation=True,
+                      picks=None, ax=None, color='black', xscale='linear',
+                      area_mode='std', area_alpha=0.33, dB=True, estimate='auto',
+                      show=True, n_jobs=1, average=False, line_alpha=None,
+                      spatial_colors=True, sphere=None, verbose=None):
+    """%(plot_psd_doc)s.
+
+    Parameters
+    ----------
+    raw : instance of Raw
+        The raw object.
+    fmin : float
+        Start frequency to consider.
+    fmax : float
+        End frequency to consider.
+    tmin : float | None
+        Start time to consider.
+    tmax : float | None
+        End time to consider.
+    proj : bool
+        Apply projection.
+    n_fft : int | None
+        Number of points to use in Welch FFT calculations.
+        Default is None, which uses the minimum of 2048 and the
+        number of time points.
+    n_overlap : int
+        The number of points of overlap between blocks. The default value
+        is 0 (no overlap).
+    %(reject_by_annotation_raw)s
+    %(plot_psd_picks_good_data)s
+    ax : instance of Axes | None
+        Axes to plot into. If None, axes will be created.
+    %(plot_psd_color)s
+    %(plot_psd_xscale)s
+    %(plot_psd_area_mode)s
+    %(plot_psd_area_alpha)s
+    %(plot_psd_dB)s
+    %(plot_psd_estimate)s
+    %(show)s
+    %(n_jobs)s
+    %(plot_psd_average)s
+    %(plot_psd_line_alpha)s
+    %(plot_psd_spatial_colors)s
+    %(topomap_sphere_auto)s
+    %(verbose)s
+
+    Returns
+    -------
+    fig : instance of Figure
+        Figure with frequency spectra of the data channels.
+    """
+    from .utils import _set_psd_plot_params
+    fig, picks_list, titles_list, units_list, scalings_list, ax_list, \
+    make_label, xlabels_list = _set_psd_plot_params(
+        raw.info, proj, picks, ax, area_mode)
+    _check_psd_fmax(raw, fmax)
+    del ax
+    psd_list = list()
+    if n_fft is None:
+        if tmax is None or not np.isfinite(tmax):
+            tmax = raw.times[-1]
+        tmin = 0. if tmin is None else tmin
+        n_fft = min(np.diff(raw.time_as_index([tmin, tmax]))[0] + 1, 2048)
+    for picks in picks_list:
+        psd, freqs = psd_welch(raw, tmin=tmin, tmax=tmax, picks=picks,
+                               fmin=fmin, fmax=fmax, proj=proj, n_fft=n_fft,
+                               n_overlap=n_overlap, n_jobs=n_jobs,
+                               reject_by_annotation=reject_by_annotation)
+        psd_list.append(psd)
+    return psd_list, freqs
 
 
 def _prepare_mne_browse_raw(params, title, bgcolor, color, bad_color, inds,
@@ -681,7 +755,7 @@ def _prepare_mne_browse_raw(params, title, bgcolor, color, bad_color, inds,
 
         for idx, ci in enumerate(cis):
             this_color = (bad_color if info['ch_names'][ci] in
-                          info['bads'] else color)
+                                       info['bads'] else color)
             if isinstance(this_color, dict):
                 this_color = this_color[params['types'][ci]]
             ax_vscroll.add_patch(mpl.patches.Rectangle((0, idx), 1, 1,
@@ -692,7 +766,7 @@ def _prepare_mne_browse_raw(params, title, bgcolor, color, bad_color, inds,
     else:
         for ci in range(len(inds)):
             this_color = (bad_color if info['ch_names'][inds[ci]] in
-                          info['bads'] else color)
+                                       info['bads'] else color)
             if isinstance(this_color, dict):
                 this_color = this_color[params['types'][inds[ci]]]
             ax_vscroll.add_patch(mpl.patches.Rectangle((0, ci), 1, 1,
@@ -838,10 +912,10 @@ def _plot_raw_traces(params, color, bad_color, event_lines=None,
                 x = this_t[0]
                 # This is what our data get multiplied by
                 inv_norm = (
-                    params['scalings'][this_type] *
-                    params['unit_scalings'][this_type] *
-                    2. /
-                    params['scale_factor'])
+                        params['scalings'][this_type] *
+                        params['unit_scalings'][this_type] *
+                        2. /
+                        params['scale_factor'])
 
                 units = params['units'][this_type]
                 bar = ax.plot([x, x], [offset - 1., offset + 1.],

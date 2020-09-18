@@ -9,28 +9,29 @@
 #
 # License: BSD (3-clause)
 
-from copy import deepcopy
-from datetime import timedelta
 import os
 import os.path as op
+from copy import deepcopy
+from datetime import timedelta
 
 import numpy as np
 
-from .constants import FIFF
-from .utils import _construct_bids_filename, _check_orig_units
-from .pick import (pick_types, pick_channels, pick_info, _picks_to_idx)
-from .meas_info import write_meas_info
-from .proj import setup_proj, activate_proj, _proj_equal, ProjMixin
-from ..channels.channels import (ContainsMixin, UpdateChannelsMixin,
-                                 SetChannelsMixin, InterpolationMixin)
 from .compensator import set_current_comp, make_compensator
+from .constants import FIFF
+from .meas_info import write_meas_info
+from .pick import (pick_types, pick_channels, pick_info, _picks_to_idx)
+from .proj import setup_proj, activate_proj, _proj_equal, ProjMixin
+from .utils import _construct_bids_filename, _check_orig_units
 from .write import (start_file, end_file, start_block, end_block,
                     write_dau_pack16, write_float, write_double,
                     write_complex64, write_complex128, write_int,
                     write_id, write_string, _get_split_size, _NEXT_FILE_BUFFER)
-
+from ..annotations import Annotations, _combine_annotations, _sync_onset
 from ..annotations import (_annotations_starts_stops, _write_annotations,
                            _handle_meas_date)
+from ..channels.channels import (ContainsMixin, UpdateChannelsMixin,
+                                 SetChannelsMixin, InterpolationMixin)
+from ..event import find_events, concatenate_events
 from ..filter import (FilterMixin, notch_filter, resample, _resamp_ratio_len,
                       _resample_stim_channels, _check_fun)
 from ..parallel import parallel_func
@@ -42,9 +43,7 @@ from ..utils import (_check_fname, _check_pandas_installed, sizeof_fmt,
                      _check_preload, _get_argvalues, _check_option,
                      _build_data_frame, _convert_times, _scale_dataframe_data,
                      _check_time_format)
-from ..viz import plot_raw, plot_raw_psd, plot_raw_psd_topo, _RAW_CLIP_DEF
-from ..event import find_events, concatenate_events
-from ..annotations import Annotations, _combine_annotations, _sync_onset
+from ..viz import plot_raw, plot_raw_psd, plot_raw_psd_topo, _RAW_CLIP_DEF, calculate_raw_psd
 
 
 class TimeMixin(object):
@@ -1435,6 +1434,24 @@ class BaseRaw(ProjMixin, ContainsMixin, UpdateChannelsMixin, SetChannelsMixin,
                             average=average, line_alpha=line_alpha,
                             spatial_colors=spatial_colors, sphere=sphere,
                             verbose=verbose)
+
+    @verbose
+    @copy_function_doc_to_method_doc(plot_raw_psd)
+    def calculate_psd(self, fmin=0, fmax=np.inf, tmin=None, tmax=None, proj=False,
+                      n_fft=None, n_overlap=0, reject_by_annotation=True,
+                      picks=None, ax=None, color='black', xscale='linear',
+                      area_mode='std', area_alpha=0.33, dB=True, estimate='auto',
+                      show=True, n_jobs=1, average=False, line_alpha=None,
+                      spatial_colors=True, sphere=None, verbose=None):
+        return calculate_raw_psd(self, fmin=fmin, fmax=fmax, tmin=tmin, tmax=tmax,
+                                 proj=proj, n_fft=n_fft, n_overlap=n_overlap,
+                                 reject_by_annotation=reject_by_annotation,
+                                 picks=picks, ax=ax, color=color, xscale=xscale,
+                                 area_mode=area_mode, area_alpha=area_alpha,
+                                 dB=dB, estimate=estimate, show=show, n_jobs=n_jobs,
+                                 average=average, line_alpha=line_alpha,
+                                 spatial_colors=spatial_colors, sphere=sphere,
+                                 verbose=verbose)
 
     @copy_function_doc_to_method_doc(plot_raw_psd_topo)
     def plot_psd_topo(self, tmin=0., tmax=None, fmin=0, fmax=100, proj=False,
