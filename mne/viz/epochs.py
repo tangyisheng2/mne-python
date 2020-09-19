@@ -939,7 +939,7 @@ def plot_epochs_psd(epochs, fmin=0, fmax=np.inf, tmin=None, tmax=None,
     """
     from .utils import _set_psd_plot_params, _plot_psd
     fig, picks_list, titles_list, units_list, scalings_list, ax_list, \
-        make_label, xlabels_list = \
+    make_label, xlabels_list = \
         _set_psd_plot_params(epochs.info, proj, picks, ax, area_mode)
     _check_psd_fmax(epochs, fmax)
     del ax
@@ -961,6 +961,86 @@ def plot_epochs_psd(epochs, fmin=0, fmax=np.inf, tmin=None, tmax=None,
                     spatial_colors, xscale, line_alpha, sphere, xlabels_list)
     plt_show(show)
     return fig
+
+
+@verbose
+def calculate_epochs_psd(epochs, fmin=0, fmax=np.inf, tmin=None, tmax=None,
+                         proj=False, bandwidth=None, adaptive=False, low_bias=True,
+                         normalization='length', picks=None, ax=None, color='black',
+                         xscale='linear', area_mode='std', area_alpha=0.33,
+                         dB=True, estimate='auto', show=True, n_jobs=1,
+                         average=False, line_alpha=None, spatial_colors=True,
+                         sphere=None, verbose=None):
+    """%(plot_psd_doc)s.
+    # Modified by Eason
+    Parameters
+    ----------
+    epochs : instance of Epochs
+        The epochs object.
+    fmin : float
+        Start frequency to consider.
+    fmax : float
+        End frequency to consider.
+    tmin : float | None
+        Start time to consider.
+    tmax : float | None
+        End time to consider.
+    proj : bool
+        Apply projection.
+    bandwidth : float
+        The bandwidth of the multi taper windowing function in Hz. The default
+        value is a window half-bandwidth of 4.
+    adaptive : bool
+        Use adaptive weights to combine the tapered spectra into PSD
+        (slow, use n_jobs >> 1 to speed up computation).
+    low_bias : bool
+        Only use tapers with more than 90%% spectral concentration within
+        bandwidth.
+    normalization : str
+        Either "full" or "length" (default). If "full", the PSD will
+        be normalized by the sampling rate as well as the length of
+        the signal (as in nitime).
+    %(plot_psd_picks_good_data)s
+    ax : instance of Axes | None
+        Axes to plot into. If None, axes will be created.
+    %(plot_psd_color)s
+    %(plot_psd_xscale)s
+    %(plot_psd_area_mode)s
+    %(plot_psd_area_alpha)s
+    %(plot_psd_dB)s
+    %(plot_psd_estimate)s
+    %(show)s
+    %(n_jobs)s
+    %(plot_psd_average)s
+    %(plot_psd_line_alpha)s
+    %(plot_psd_spatial_colors)s
+    %(topomap_sphere_auto)s
+    %(verbose)s
+
+    Returns
+    -------
+    fig : instance of Figure
+        Figure with frequency spectra of the data channels.
+    """
+    from .utils import _set_psd_plot_params, _plot_psd
+    fig, picks_list, titles_list, units_list, scalings_list, ax_list, \
+    make_label, xlabels_list = \
+        _set_psd_plot_params(epochs.info, proj, picks, ax, area_mode)
+    _check_psd_fmax(epochs, fmax)
+    del ax
+    psd_list = list()
+    for picks in picks_list:
+        # Multitaper used for epochs instead of Welch, because Welch chunks
+        # the data; epoched data are by nature already chunked, however.
+        psd, freqs = psd_multitaper(epochs, picks=picks, fmin=fmin,
+                                    fmax=fmax, tmin=tmin, tmax=tmax,
+                                    bandwidth=bandwidth, adaptive=adaptive,
+                                    low_bias=low_bias,
+                                    normalization=normalization, proj=proj,
+                                    n_jobs=n_jobs)
+        psd_list.append(np.mean(psd, axis=0))
+
+    return psd_list, freqs
 
 
 def _prepare_mne_browse_epochs(params, projs, n_channels, n_epochs, scalings,
@@ -1948,17 +2028,17 @@ def _plot_histogram(params):
     data = list()
     if 'eeg' in params['types']:
         eegs = np.array([p2p.T[i] for i,
-                         x in enumerate(params['types']) if x == 'eeg'])
+                                      x in enumerate(params['types']) if x == 'eeg'])
         data.append(eegs.ravel())
         types.append('eeg')
     if 'mag' in params['types']:
         mags = np.array([p2p.T[i] for i,
-                         x in enumerate(params['types']) if x == 'mag'])
+                                      x in enumerate(params['types']) if x == 'mag'])
         data.append(mags.ravel())
         types.append('mag')
     if 'grad' in params['types']:
         grads = np.array([p2p.T[i] for i,
-                          x in enumerate(params['types']) if x == 'grad'])
+                                       x in enumerate(params['types']) if x == 'grad'])
         data.append(grads.ravel())
         types.append('grad')
     params['histogram'] = plt.figure()
