@@ -110,21 +110,21 @@ for event_index in range(0, epochs.events.shape[0]):
 raw.plot_psd()
 
 psd_mean_with_slice = np.zeros([0, 3 * channel_num])
+# Create structure for output
+# 'Cz', 'Fz', 'Fp1', 'F7', 'F3', 'FC1', 'C3', 'FC5', 'FT9', 'T7', 'CP5', 'CP1',
+# 'P3', 'P7', 'PO9', 'O1', 'Pz', 'Oz', 'O2', 'PO10', 'P8', 'P4', 'CP2', 'CP6', 'T8', 'FT10', 'FC6', 'C4',
+# 'FC2', 'F4', 'F8', 'Fp2'
+
+# Auto generate column
+column = list()
+for channel_name in raw.ch_names[0:-1]:  # Delete "Status" channel
+    column.append(f"{'t-'}{channel_name}")
+    column.append(f"{'a-'}{channel_name}")
+    column.append(f"{'b-'}{channel_name}")
+psd_mean = np.zeros([3, channel_num], dtype=float)
+
 for event_index in range(0, epochs.events.shape[0]):
     for window_index in range(0, int(sliced_instance_len / sliced_window_len)):
-        # Create structure for output
-        # 'Cz', 'Fz', 'Fp1', 'F7', 'F3', 'FC1', 'C3', 'FC5', 'FT9', 'T7', 'CP5', 'CP1',
-        # 'P3', 'P7', 'PO9', 'O1', 'Pz', 'Oz', 'O2', 'PO10', 'P8', 'P4', 'CP2', 'CP6', 'T8', 'FT10', 'FC6', 'C4',
-        # 'FC2', 'F4', 'F8', 'Fp2'
-
-        # Auto generate column
-        column = list()
-        for channel_name in raw.ch_names[0:-1]:  # Delete "Status" channel
-            column.append(f"{'t-'}{channel_name}")
-            column.append(f"{'a-'}{channel_name}")
-            column.append(f"{'b-'}{channel_name}")
-        psd_mean = np.zeros([3, channel_num], dtype=float)
-
         sliced_instance_array[event_index][window_index].plot_psd()
 
         # Calculate PSD
