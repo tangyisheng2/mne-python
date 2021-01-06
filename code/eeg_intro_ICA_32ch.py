@@ -156,7 +156,7 @@ for instance in epochs:
 # Plot the PSD
 raw.plot_psd()
 
-psd_mean_with_slice = np.zeros([0, 3 * channel_num])
+psd_mean_with_slice = np.zeros([0, 3 * channel_num + 2])  # 含有两个index
 # Create structure for output
 # 'Cz', 'Fz', 'Fp1', 'F7', 'F3', 'FC1', 'C3', 'FC5', 'FT9', 'T7', 'CP5', 'CP1',
 # 'P3', 'P7', 'PO9', 'O1', 'Pz', 'Oz', 'O2', 'PO10', 'P8', 'P4', 'CP2', 'CP6', 'T8', 'FT10', 'FC6', 'C4',
@@ -168,14 +168,15 @@ for channel_name in raw.ch_names:  # Delete "Status" channel
     channel_column.append(f"{'t-'}{channel_name}")
     channel_column.append(f"{'a-'}{channel_name}")
     channel_column.append(f"{'b-'}{channel_name}")
+channel_column.extend(['instance_index', 'window_index'])
 psd_mean = np.zeros([3, channel_num], dtype=float)
 
-for event_index in range(0, epochs.events.shape[0]):
-    for window_index in range(0, int(sliced_instance_len / sliced_window_len)):
+for instance_index in range(0, sliced_instance_array.__len__()):
+    for window_index in range(0, sliced_instance_array[instance_index].__len__()):
         # sliced_instance_array[event_index][window_index].plot_psd()
 
         # Calculate PSD
-        psd_list, freqs = sliced_instance_array[event_index][window_index].calculate_psd()
+        psd_list, freqs = sliced_instance_array[instance_index][window_index].calculate_psd()
 
         # Convert psd_list to matrix (Share:[Index of time windows, frequencies from 0-64Hz])
         # psd_matrix = np.asarray(psd_list)
@@ -201,10 +202,11 @@ for event_index in range(0, epochs.events.shape[0]):
 
         # Reshape matrix into vector
         psd_mean_reshape = psd_mean.reshape([1, psd_mean.size])  # todo:加标记
-
         # Visualize PSD vector
-        psd_mean_pd = pd.DataFrame(psd_mean_reshape, columns=channel_column)
+        psd_mean_pd = pd.DataFrame(np.c_[psd_mean_reshape, instance_index, window_index],
+                                   columns=channel_column)
         psd_mean_with_slice = np.r_[psd_mean_with_slice, psd_mean_pd]
 
-psd_mean_pd_with_slice = pd.DataFrame(psd_mean_with_slice, columns=[channel_column, "flags"])
+psd_mean_pd_with_slice = pd.DataFrame(psd_mean_with_slice,
+                                      columns=channel_column)
 pass
