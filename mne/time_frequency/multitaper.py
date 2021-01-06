@@ -4,7 +4,6 @@
 # Parts of this code were copied from NiTime http://nipy.sourceforge.net/nitime
 
 import operator
-
 import numpy as np
 
 from ..fixes import _get_dpss, rfft, irfft, rfftfreq

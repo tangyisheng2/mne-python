@@ -7,11 +7,11 @@
 import os.path as op
 from shutil import copytree
 
-import numpy as np
 import pytest
 import scipy
+import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose, assert_equal
-
+from mne.datasets import testing
 import mne
 from mne import (read_source_spaces, vertex_to_mni, write_source_spaces,
                  setup_source_space, setup_volume_source_space,
@@ -19,19 +19,18 @@ from mne import (read_source_spaces, vertex_to_mni, write_source_spaces,
                  morph_source_spaces, SourceEstimate, make_sphere_model,
                  head_to_mni, read_trans, compute_source_morph,
                  read_bem_solution, read_freesurfer_lut)
-from mne.datasets import testing
 from mne.fixes import _get_img_fdata
-from mne.io.constants import FIFF
-from mne.source_estimate import _get_src_type
-from mne.source_space import _get_mgz_header, _read_talxfm
-from mne.source_space import (get_volume_labels_from_aseg,
-                              get_volume_labels_from_src,
-                              _compare_source_spaces)
-from mne.surface import _accumulate_normals, _triangle_neighbors
-from mne.transforms import apply_trans, invert_transform
 from mne.utils import (requires_nibabel, run_subprocess,
                        modified_env, requires_mne, run_tests_if_main,
                        check_version)
+from mne.surface import _accumulate_normals, _triangle_neighbors
+from mne.source_space import _get_mgz_header, _read_talxfm
+from mne.source_estimate import _get_src_type
+from mne.transforms import apply_trans, invert_transform
+from mne.source_space import (get_volume_labels_from_aseg,
+                              get_volume_labels_from_src,
+                              _compare_source_spaces)
+from mne.io.constants import FIFF
 
 data_path = testing.data_path(download=False)
 subjects_dir = op.join(data_path, 'subjects')

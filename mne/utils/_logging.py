@@ -6,12 +6,12 @@
 
 import contextlib
 import inspect
-import logging
-import os.path as op
+from io import StringIO
 import re
 import sys
+import logging
+import os.path as op
 import warnings
-from io import StringIO
 
 from ..externals.decorator import FunctionMaker
 

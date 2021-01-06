@@ -13,14 +13,16 @@ at which the fix is no longer needed.
 # License: BSD
 
 import inspect
-import os
-import warnings
 from distutils.version import LooseVersion
 from math import log
+import os
+from pathlib import Path
+import warnings
 
 import numpy as np
 import scipy
 from scipy import linalg
+from scipy.linalg import LinAlgError
 
 
 ###############################################################################
@@ -317,7 +319,7 @@ except ImportError:
 # Orth with rcond argument (SciPy 1.1)
 
 if LooseVersion(scipy.__version__) >= '1.1':
-    pass
+    from scipy.linalg import orth
 else:
     def orth(A, rcond=None):  # noqa
         u, s, vh = linalg.svd(A, full_matrices=False)

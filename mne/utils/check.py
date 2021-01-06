@@ -4,12 +4,12 @@
 #
 # License: BSD (3-clause)
 
+from difflib import get_close_matches
+from distutils.version import LooseVersion
 import operator
 import os
 import os.path as op
 import sys
-from difflib import get_close_matches
-from distutils.version import LooseVersion
 from pathlib import Path
 
 import numpy as np

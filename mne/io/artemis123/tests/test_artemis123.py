@@ -6,17 +6,17 @@
 import os.path as op
 
 import numpy as np
-import pytest
 from numpy.testing import assert_allclose, assert_equal
+import pytest
 
-from mne import pick_types
-from mne.datasets import testing
-from mne.io import read_raw_artemis123
-from mne.io.artemis123.utils import _generate_mne_locs_file, _load_mne_locs
-from mne.io.constants import FIFF
-from mne.io.tests.test_raw import _test_raw_reader
-from mne.transforms import rot_to_quat, _angle_between_quats
 from mne.utils import run_tests_if_main, _TempDir
+from mne.io import read_raw_artemis123
+from mne.io.tests.test_raw import _test_raw_reader
+from mne.datasets import testing
+from mne.io.artemis123.utils import _generate_mne_locs_file, _load_mne_locs
+from mne import pick_types
+from mne.transforms import rot_to_quat, _angle_between_quats
+from mne.io.constants import FIFF
 
 artemis123_dir = op.join(testing.data_path(download=False), 'ARTEMIS123')
 

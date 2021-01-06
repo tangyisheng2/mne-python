@@ -4,18 +4,18 @@
 #
 # License: BSD (3-clause)
 
+from copy import deepcopy
 import inspect
 import os
 import os.path as op
 import sys
 import warnings
 import webbrowser
-from copy import deepcopy
 
-from .check import _check_option
 from .config import get_config
 from ..defaults import HEAD_SIZE_DEFAULT
 from ..externals.doccer import filldoc, unindent_dict
+from .check import _check_option
 
 ##############################################################################
 # Define our standard documentation entries

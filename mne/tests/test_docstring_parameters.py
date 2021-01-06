@@ -1,9 +1,9 @@
 import inspect
+from inspect import getsource
 import os.path as op
+from pkgutil import walk_packages
 import re
 import sys
-from inspect import getsource
-from pkgutil import walk_packages
 from unittest import SkipTest
 
 import pytest
