@@ -156,7 +156,9 @@ for instance in epochs:
 # Plot the PSD
 raw.plot_psd()
 
-psd_mean_with_slice = np.zeros([0, 3 * channel_num + 2])  # 含有两个index
+# psd_mean_with_slice = np.zeros([0, 3 * channel_num + 2])  # 含有两个index
+psd_mean_with_slice = np.zeros([0, 3 * channel_num])  # 后来吧两个index去掉了
+tmp = np.zeros([0, 3 * channel_num])  # 满足甲方爸爸需要
 # Create structure for output
 # 'Cz', 'Fz', 'Fp1', 'F7', 'F3', 'FC1', 'C3', 'FC5', 'FT9', 'T7', 'CP5', 'CP1',
 # 'P3', 'P7', 'PO9', 'O1', 'Pz', 'Oz', 'O2', 'PO10', 'P8', 'P4', 'CP2', 'CP6', 'T8', 'FT10', 'FC6', 'C4',
@@ -168,10 +170,11 @@ for channel_name in raw.ch_names:  # Delete "Status" channel
     channel_column.append(f"{'t-'}{channel_name}")
     channel_column.append(f"{'a-'}{channel_name}")
     channel_column.append(f"{'b-'}{channel_name}")
-channel_column.extend(['instance_index', 'window_index'])
+# channel_column.extend(['instance_index', 'window_index'])
 psd_mean = np.zeros([3, channel_num], dtype=float)
 
 for instance_index in range(0, sliced_instance_array.__len__()):
+    count = 0
     for window_index in range(0, sliced_instance_array[instance_index].__len__()):
         # sliced_instance_array[event_index][window_index].plot_psd()
 
@@ -201,12 +204,31 @@ for instance_index in range(0, sliced_instance_array.__len__()):
         psd_mean[2, :] = beta_slice.mean(axis=1)
 
         # Reshape matrix into vector
-        psd_mean_reshape = psd_mean.reshape([1, psd_mean.size])  # todo:加标记
+        psd_mean_reshape = psd_mean.reshape([1, psd_mean.size])
         # Visualize PSD vector
-        psd_mean_pd = pd.DataFrame(np.c_[psd_mean_reshape, instance_index, window_index],
+        psd_mean_pd = pd.DataFrame(psd_mean_reshape,
                                    columns=channel_column)
         psd_mean_with_slice = np.r_[psd_mean_with_slice, psd_mean_pd]
+        tmp = np.r_[tmp, psd_mean_pd]  # 满足甲方爸爸需要
+        if count < 9:
+            count = count + 1
+        else:
+            count = 0
+            try:
+                result = np.r_[
+                    result, np.append(tmp.reshape(1, tmp.size), instance_index).reshape(
+                        1,
+                        result.shape[
+                            1])]
+            except NameError:
+                result = np.zeros([0, tmp.size + 1], dtype=float)
+                result = np.r_[
+                    result, np.append(tmp.reshape(1, tmp.size), instance_index).reshape(
+                        1,
+                        result.shape[
+                            1])]
+            tmp = np.zeros([0, 3 * channel_num])  # 满足甲方爸爸需要
 
-psd_mean_pd_with_slice = pd.DataFrame(psd_mean_with_slice,
-                                      columns=channel_column)
+# psd_mean_pd_with_slice = pd.DataFrame(psd_mean_with_slice,
+#                                       columns=channel_column)
 pass
