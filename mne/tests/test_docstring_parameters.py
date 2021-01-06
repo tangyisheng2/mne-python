@@ -67,7 +67,7 @@ docstring_ignores = {
     'mne.fixes',
     'mne.io.write',
     'mne.io.meas_info.Info',
-    'mne.utils_Eason.docs.deprecated',
+    'mne.utils.docs.deprecated',
 }
 char_limit = 800  # XX eventually we should probably get this lower
 tab_ignores = [
@@ -202,8 +202,8 @@ def test_tabs():
 documented_ignored_mods = (
     'mne.fixes',
     'mne.io.write',
-    'mne.utils_Eason',
-    'mne.viz.utils_Eason',
+    'mne.utils',
+    'mne.viz.utils',
 )
 documented_ignored_names = """
 BaseEstimator

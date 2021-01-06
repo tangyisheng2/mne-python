@@ -1686,7 +1686,7 @@ def combine_channels(inst, groups, method='mean', keep_stim=False,
     groups = OrderedDict(deepcopy(groups))
 
     # Convert string values of ``method`` into callables
-    # XXX Possibly de-duplicate with _make_combine_callable of mne/viz/utils_Eason.py
+    # XXX Possibly de-duplicate with _make_combine_callable of mne/viz/utils.py
     if isinstance(method, str):
         method_dict = {key: partial(getattr(np, key), axis=ch_axis)
                        for key in ('mean', 'median', 'std')}

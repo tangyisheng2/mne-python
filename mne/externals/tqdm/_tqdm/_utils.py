@@ -6,5 +6,5 @@ from .utils import CUR_OS, IS_WIN, IS_NIX, RE_ANSI, _range, _unich, _unicode, co
     _environ_cols_wrapper, _environ_cols_windows, _environ_cols_tput, _environ_cols_linux, _term_move_up  # NOQA
 
 warn("This function will be removed in tqdm==5.0.0\n"
-     "Please use `tqdm.utils_Eason.*` instead of `tqdm._utils.*`",
+     "Please use `tqdm.utils.*` instead of `tqdm._utils.*`",
      TqdmDeprecationWarning, stacklevel=2)

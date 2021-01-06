@@ -17,7 +17,6 @@ import pandas as pd
 
 import mne
 import utils_Eason
-from mne.preprocessing import (ICA)
 
 logger = logging.getLogger('mne')  # one selection here used across mne-python
 logger.propagate = False  # don't propagate (in case of multiple imports)
@@ -49,6 +48,22 @@ print(raw)
 print("EEG Info:\n" + str(raw.info))
 print("EEG Channel Type:\n" + str(raw.get_channel_types()))
 print("EEG Channel Name:\n" + str(raw.ch_names))
+
+# Go ICA
+
+# ica = ICA(n_components=0.95, method='fastica').fit(raw)  # todo: check define of n_components
+
+# eeg_inds, scores = ica.find_bads_eeg(epochs, threshold='auto')
+#
+# ica.plot_components(ecg_inds)
+
+###############################################################################
+# Plot properties of ECG components:
+# ica.plot_properties(epochs, picks=eeg_inds)
+
+###############################################################################
+# Plot the estimated source of detected ECG related components
+# ica.plot_sources(raw, picks=eeg_inds)
 
 # Print raw data
 raw_data = raw.get_data()
@@ -114,20 +129,6 @@ for event_index in range(0, events.__len__() - 1):
 # print(epochs)
 # epochs.plot(n_epochs=10)
 
-# Go ICA
-ica = ICA(n_components=0.95, method='fastica').fit(epochs)  # todo: check define of n_components
-
-# eeg_inds, scores = ica.find_bads_eeg(epochs, threshold='auto')
-#
-# ica.plot_components(ecg_inds)
-
-###############################################################################
-# Plot properties of ECG components:
-# ica.plot_properties(epochs, picks=eeg_inds)
-
-###############################################################################
-# Plot the estimated source of detected ECG related components
-# ica.plot_sources(raw, picks=eeg_inds)
 
 # Prepare for slice
 time_stamp = data.loc["TIME_STAMP_s"] * 1000 + data.loc["TIME_STAMP_ms"]  # Create array for time_stamp in second
@@ -144,14 +145,12 @@ Please change below settings in the beginning config section in this file
 '''
 Setting ends
 '''
-for event_index in range(0, epochs.events.shape[0]):
+for instance in epochs:
     sliced_window_array = list()
-    for window_start_time in np.arange(0, int(instance_len_in_each_event[event_index] / sliced_window_len),
-                                       sliced_window_len):
-        a = window_start_time
-        b = window_start_time + sliced_window_len
+    for window_start_time in np.arange(0, instance.tmax, sliced_window_len):
         sliced_window_array.append(
-            epochs[0].copy().crop(tmin=window_start_time, tmax=window_start_time + sliced_window_len))
+            instance.copy().crop(tmin=window_start_time, tmax=window_start_time + sliced_window_len))
+
     sliced_instance_array.append(sliced_window_array)
 
 # Plot the PSD

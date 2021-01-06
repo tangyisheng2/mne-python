@@ -2073,9 +2073,9 @@ class deprecated(object):
     and the docstring. Note: to use this with the default value for extra, put
     in an empty of parentheses::
 
-        >>> from mne.utils_Eason import deprecated
+        >>> from mne.utils import deprecated
         >>> deprecated() # doctest: +ELLIPSIS
-        <mne.utils_Eason.docs.deprecated object at ...>
+        <mne.utils.docs.deprecated object at ...>
 
         >>> @deprecated()
         ... def some_function(): pass

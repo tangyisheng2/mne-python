@@ -99,7 +99,7 @@ def test_data():
 
 
 def test_utils():
-    """Test artemis123 utils_Eason."""
+    """Test artemis123 utils."""
     # make a tempfile
     tmp_dir = _TempDir()
     tmp_fname = op.join(tmp_dir, 'test_gen_mne_locs.csv')

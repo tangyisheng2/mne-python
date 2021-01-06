@@ -1807,7 +1807,7 @@ class BaseEpochs(ProjMixin, ContainsMixin, UpdateChannelsMixin, ShiftTimeMixin,
         -------
         %(df_return)s
         """
-        # check pandas once here, instead of in each private utils_Eason function
+        # check pandas once here, instead of in each private utils function
         pd = _check_pandas_installed()  # noqa
         # arg checking
         valid_index_args = ['time', 'epoch', 'condition']

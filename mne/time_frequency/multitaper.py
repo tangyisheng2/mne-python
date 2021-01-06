@@ -98,7 +98,7 @@ def dpss_windows(N, half_nbw, Kmax, low_bias=True, interp_from=None,
     # Now find the eigenvalues of the original spectral concentration problem
     # Use the autocorr sequence technique from Percival and Walden, 1993 pg 390
 
-    # compute autocorr using FFT (same as nitime.utils_Eason.autocorr(dpss) * N)
+    # compute autocorr using FFT (same as nitime.utils.autocorr(dpss) * N)
     rxx_size = 2 * N - 1
     n_fft = next_fast_len(rxx_size)
     dpss_fft = rfft(dpss, n_fft)

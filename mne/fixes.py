@@ -510,7 +510,7 @@ class BaseEstimator(object):
         for key in self._get_param_names():
             # We need deprecation warnings to always be on in order to
             # catch deprecated param values.
-            # This is set in utils_Eason/__init__.py but it gets overwritten
+            # This is set in utils/__init__.py but it gets overwritten
             # when running under python3 somehow.
             warnings.simplefilter("always", DeprecationWarning)
             try:

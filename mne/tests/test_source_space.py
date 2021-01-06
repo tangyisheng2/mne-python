@@ -981,7 +981,7 @@ finally:
 fname = 'small-src.fif'
 fname_gz = fname + '.gz'
 mne.write_source_spaces(fname, src)
-mne.utils_Eason.run_subprocess(['mne_add_patch_info', '--src', fname,
+mne.utils.run_subprocess(['mne_add_patch_info', '--src', fname,
                           '--srcp', fname])
 mne.write_source_spaces(fname_gz, mne.read_source_spaces(fname))
 """

@@ -102,7 +102,7 @@ def _check_mayavi_version(min_version='4.3.0'):
         raise RuntimeError("Need mayavi >= %s" % min_version)
 
 
-# adapted from scikit-learn utils_Eason/validation.py
+# adapted from scikit-learn utils/validation.py
 def check_random_state(seed):
     """Turn seed into a numpy.random.mtrand.RandomState instance.
 
