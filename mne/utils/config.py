@@ -5,21 +5,20 @@
 # License: BSD (3-clause)
 
 import atexit
-from functools import partial
 import json
 import os
 import os.path as op
 import platform
+import re
 import shutil
 import sys
 import tempfile
-import re
+from functools import partial
 
 import numpy as np
 
-from .check import _validate_type, _check_pyqt5_version
 from ._logging import warn, logger
-
+from .check import _validate_type, _check_pyqt5_version
 
 _temp_home_dir = None
 
@@ -231,7 +230,7 @@ def get_config(key=None, default=None, raise_error=False, home_dir=None,
                     'solution, or ' % key) if use_env else ''
         extra_env = (' You can also set the environment variable before '
                      'running python.' if use_env else '')
-        meth_file = ('mne.utils.set_config("%s", VALUE, set_env=True) '
+        meth_file = ('mne.utils_Eason.set_config("%s", VALUE, set_env=True) '
                      'for a permanent one' % key)
         raise KeyError('Key "%s" not found in %s'
                        'the mne-python config file (%s). '

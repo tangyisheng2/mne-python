@@ -59,7 +59,7 @@ mne.viz.set_3d_view(fig, azimuth=173.78, elevation=101.75,
 #
 # And display source positions in freeview::
 #
-#    >>> from mne.utils import run_subprocess
+#    >>> from mne.utils_Eason import run_subprocess
 #    >>> mri_fname = subjects_dir + '/sample/mri/brain.mgz'
 #    >>> run_subprocess(['freeview', '-v', mri_fname, '-v',
 #                        '%s:colormap=lut:opacity=0.5' % aseg_fname, '-v',

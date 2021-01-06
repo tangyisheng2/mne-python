@@ -4,19 +4,18 @@
 #
 # License: BSD (3-clause)
 
-from copy import deepcopy
 import inspect
 import os
 import os.path as op
 import sys
 import warnings
 import webbrowser
+from copy import deepcopy
 
+from .check import _check_option
 from .config import get_config
 from ..defaults import HEAD_SIZE_DEFAULT
 from ..externals.doccer import filldoc, unindent_dict
-from .check import _check_option
-
 
 ##############################################################################
 # Define our standard documentation entries
@@ -2074,9 +2073,9 @@ class deprecated(object):
     and the docstring. Note: to use this with the default value for extra, put
     in an empty of parentheses::
 
-        >>> from mne.utils import deprecated
+        >>> from mne.utils_Eason import deprecated
         >>> deprecated() # doctest: +ELLIPSIS
-        <mne.utils.docs.deprecated object at ...>
+        <mne.utils_Eason.docs.deprecated object at ...>
 
         >>> @deprecated()
         ... def some_function(): pass

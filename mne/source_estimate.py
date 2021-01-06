@@ -16,14 +16,17 @@ from scipy.sparse import coo_matrix, block_diag as sparse_block_diag
 
 from .cov import Covariance
 from .evoked import _get_peak
+from .externals.h5io import read_hdf5, write_hdf5
 from .filter import resample
+from .io.base import TimeMixin
 from .io.constants import FIFF
-from .surface import read_surface, _get_ico_surface, mesh_edges
+from .io.meas_info import Info
 from .source_space import (_ensure_src, _get_morph_src_reordering,
                            _ensure_src_subject, SourceSpaces, _get_src_nn,
                            _import_nibabel, _get_mri_info_data,
                            _get_atlas_values, _check_volume_labels,
                            read_freesurfer_lut)
+from .surface import read_surface, _get_ico_surface, mesh_edges
 from .transforms import _get_trans, apply_trans
 from .utils import (get_subjects_dir, _check_subject, logger, verbose, _pl,
                     _time_mask, warn, copy_function_doc_to_method_doc,
@@ -34,9 +37,6 @@ from .utils import (get_subjects_dir, _check_subject, logger, verbose, _pl,
                     sizeof_fmt, object_size)
 from .viz import (plot_source_estimates, plot_vector_source_estimates,
                   plot_volume_source_estimates)
-from .io.base import TimeMixin
-from .io.meas_info import Info
-from .externals.h5io import read_hdf5, write_hdf5
 
 
 def _read_stc(filename):
@@ -1196,7 +1196,7 @@ class _BaseSourceEstimate(TimeMixin):
         -------
         %(df_return)s
         """
-        # check pandas once here, instead of in each private utils function
+        # check pandas once here, instead of in each private utils_Eason function
         pd = _check_pandas_installed()  # noqa
         # arg checking
         valid_index_args = ['time', 'subject']

@@ -9,6 +9,7 @@
 # License: BSD (3-clause)
 
 from copy import deepcopy
+
 import numpy as np
 
 from .baseline import rescale
@@ -17,6 +18,17 @@ from .channels.channels import (ContainsMixin, UpdateChannelsMixin,
 from .channels.layout import _merge_ch_data, _pair_grad_sensors
 from .defaults import _EXTRAPOLATE_DEFAULT, _BORDER_DEFAULT
 from .filter import detrend, FilterMixin
+from .io.base import TimeMixin, _check_maxshield
+from .io.constants import FIFF
+from .io.meas_info import read_meas_info, write_meas_info
+from .io.open import fiff_open
+from .io.pick import pick_types, _picks_to_idx
+from .io.proj import ProjMixin
+from .io.tag import read_tag
+from .io.tree import dir_tree_find
+from .io.write import (start_file, start_block, end_file, end_block,
+                       write_int, write_string, write_float_matrix,
+                       write_id, write_float, write_complex_float_matrix)
 from .utils import (check_fname, logger, verbose, _time_mask, warn, sizeof_fmt,
                     SizeMixin, copy_function_doc_to_method_doc, _validate_type,
                     fill_doc, _check_option, ShiftTimeMixin, _build_data_frame,
@@ -26,18 +38,6 @@ from .viz import (plot_evoked, plot_evoked_topomap, plot_evoked_field,
                   plot_evoked_image, plot_evoked_topo)
 from .viz.evoked import plot_evoked_white, plot_evoked_joint
 from .viz.topomap import _topomap_animation
-
-from .io.constants import FIFF
-from .io.open import fiff_open
-from .io.tag import read_tag
-from .io.tree import dir_tree_find
-from .io.pick import pick_types, _picks_to_idx
-from .io.meas_info import read_meas_info, write_meas_info
-from .io.proj import ProjMixin
-from .io.write import (start_file, start_block, end_file, end_block,
-                       write_int, write_string, write_float_matrix,
-                       write_id, write_float, write_complex_float_matrix)
-from .io.base import TimeMixin, _check_maxshield
 
 _aspect_dict = {
     'average': FIFF.FIFFV_ASPECT_AVERAGE,
@@ -650,7 +650,7 @@ class Evoked(ProjMixin, ContainsMixin, UpdateChannelsMixin, SetChannelsMixin,
         -------
         %(df_return)s
         """
-        # check pandas once here, instead of in each private utils function
+        # check pandas once here, instead of in each private utils_Eason function
         pd = _check_pandas_installed()  # noqa
         # arg checking
         valid_index_args = ['time']

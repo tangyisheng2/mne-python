@@ -9,28 +9,29 @@
 #
 # License: BSD (3-clause)
 
-from copy import deepcopy
-from datetime import timedelta
 import os
 import os.path as op
+from copy import deepcopy
+from datetime import timedelta
 
 import numpy as np
 
-from .constants import FIFF
-from .utils import _construct_bids_filename, _check_orig_units
-from .pick import (pick_types, pick_channels, pick_info, _picks_to_idx)
-from .meas_info import write_meas_info
-from .proj import setup_proj, activate_proj, _proj_equal, ProjMixin
-from ..channels.channels import (ContainsMixin, UpdateChannelsMixin,
-                                 SetChannelsMixin, InterpolationMixin)
 from .compensator import set_current_comp, make_compensator
+from .constants import FIFF
+from .meas_info import write_meas_info
+from .pick import (pick_types, pick_channels, pick_info, _picks_to_idx)
+from .proj import setup_proj, activate_proj, _proj_equal, ProjMixin
+from .utils import _construct_bids_filename, _check_orig_units
 from .write import (start_file, end_file, start_block, end_block,
                     write_dau_pack16, write_float, write_double,
                     write_complex64, write_complex128, write_int,
                     write_id, write_string, _get_split_size, _NEXT_FILE_BUFFER)
-
+from ..annotations import Annotations, _combine_annotations, _sync_onset
 from ..annotations import (_annotations_starts_stops, _write_annotations,
                            _handle_meas_date)
+from ..channels.channels import (ContainsMixin, UpdateChannelsMixin,
+                                 SetChannelsMixin, InterpolationMixin)
+from ..event import find_events, concatenate_events
 from ..filter import (FilterMixin, notch_filter, resample, _resamp_ratio_len,
                       _resample_stim_channels, _check_fun)
 from ..parallel import parallel_func
@@ -43,8 +44,6 @@ from ..utils import (_check_fname, _check_pandas_installed, sizeof_fmt,
                      _build_data_frame, _convert_times, _scale_dataframe_data,
                      _check_time_format)
 from ..viz import plot_raw, plot_raw_psd, plot_raw_psd_topo, _RAW_CLIP_DEF
-from ..event import find_events, concatenate_events
-from ..annotations import Annotations, _combine_annotations, _sync_onset
 
 
 class TimeMixin(object):
@@ -1741,7 +1740,7 @@ class BaseRaw(ProjMixin, ContainsMixin, UpdateChannelsMixin, SetChannelsMixin,
         -------
         %(df_return)s
         """
-        # check pandas once here, instead of in each private utils function
+        # check pandas once here, instead of in each private utils_Eason function
         pd = _check_pandas_installed()  # noqa
         # arg checking
         valid_index_args = ['time']

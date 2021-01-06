@@ -101,5 +101,5 @@ if __name__ == "__main__":
               op.join('io', 'edf', 'gdf_encodes.txt')
           ]},
           entry_points={'console_scripts': [
-              'mne = mne.commands.utils:main',
+              'mne = mne.commands.utils_Eason:main',
           ]})

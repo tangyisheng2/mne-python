@@ -1,6 +1,6 @@
 import numpy as np
-from numpy.testing import assert_array_equal
 import pytest
+from numpy.testing import assert_array_equal
 
 from mne.connectivity import seed_target_indices, degree
 
@@ -43,7 +43,7 @@ def test_degree():
     # The values for assert_array_equal below were obtained with:
     #
     # >>> import bct
-    # >>> bct.degrees_und(bct.utils.threshold_proportional(corr, 0.25) > 0)
+    # >>> bct.degrees_und(bct.utils_Eason.threshold_proportional(corr, 0.25) > 0)
     #
     # But they can also be figured out just from the structure.
 

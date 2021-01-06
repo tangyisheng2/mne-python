@@ -12,18 +12,19 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-from datetime import date
-from distutils.version import LooseVersion
 import gc
 import os
 import os.path as op
 import sys
 import warnings
+from datetime import date
+from distutils.version import LooseVersion
 
-import sphinx_gallery
-from sphinx_gallery.sorting import FileNameSortKey, ExplicitOrder
-from numpydoc import docscrape
 import matplotlib
+import sphinx_gallery
+from numpydoc import docscrape
+from sphinx_gallery.sorting import FileNameSortKey, ExplicitOrder
+
 import mne
 from mne.utils import linkcode_resolve  # noqa, analysis:ignore
 
@@ -131,7 +132,7 @@ for key in ('AcqParserFIF', 'BiHemiLabel', 'Dipole', 'DipoleFixed', 'Label',
             'preprocessing.ICA', 'preprocessing.Xdawn',
             'simulation.SourceSimulator',
             'time_frequency.CrossSpectralDensity',
-            'utils.deprecated',
+            'utils_Eason.deprecated',
             'viz.ClickableImage'):
     nitpick_ignore.append(('py:obj', f'mne.{key}.__hash__'))
 suppress_warnings = ['image.nonlocal_uri']  # we intentionally link outside

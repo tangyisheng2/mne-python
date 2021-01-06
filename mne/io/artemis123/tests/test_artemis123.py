@@ -6,17 +6,17 @@
 import os.path as op
 
 import numpy as np
-from numpy.testing import assert_allclose, assert_equal
 import pytest
+from numpy.testing import assert_allclose, assert_equal
 
-from mne.utils import run_tests_if_main, _TempDir
-from mne.io import read_raw_artemis123
-from mne.io.tests.test_raw import _test_raw_reader
-from mne.datasets import testing
-from mne.io.artemis123.utils import _generate_mne_locs_file, _load_mne_locs
 from mne import pick_types
-from mne.transforms import rot_to_quat, _angle_between_quats
+from mne.datasets import testing
+from mne.io import read_raw_artemis123
+from mne.io.artemis123.utils import _generate_mne_locs_file, _load_mne_locs
 from mne.io.constants import FIFF
+from mne.io.tests.test_raw import _test_raw_reader
+from mne.transforms import rot_to_quat, _angle_between_quats
+from mne.utils import run_tests_if_main, _TempDir
 
 artemis123_dir = op.join(testing.data_path(download=False), 'ARTEMIS123')
 
@@ -99,7 +99,7 @@ def test_data():
 
 
 def test_utils():
-    """Test artemis123 utils."""
+    """Test artemis123 utils_Eason."""
     # make a tempfile
     tmp_dir = _TempDir()
     tmp_fname = op.join(tmp_dir, 'test_gen_mne_locs.csv')

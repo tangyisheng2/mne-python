@@ -6,15 +6,14 @@
 
 import contextlib
 import inspect
-from io import StringIO
-import re
-import sys
 import logging
 import os.path as op
+import re
+import sys
 import warnings
+from io import StringIO
 
 from ..externals.decorator import FunctionMaker
-
 
 logger = logging.getLogger('mne')  # one selection here used across mne-python
 logger.propagate = False  # don't propagate (in case of multiple imports)
@@ -386,7 +385,7 @@ def filter_out_warnings(warn_record, category=None, match=None):
 
         >>> import pytest
         >>> import warnings
-        >>> from mne.utils import filter_out_warnings
+        >>> from mne.utils_Eason import filter_out_warnings
         >>> with pytest.warns(None) as recwarn:
         ...     warnings.warn("value must be 0 or None", UserWarning)
         >>> filter_out_warnings(recwarn, match=".* 0 or None")

@@ -4,12 +4,12 @@
 #
 # License: BSD (3-clause)
 
-from difflib import get_close_matches
-from distutils.version import LooseVersion
 import operator
 import os
 import os.path as op
 import sys
+from difflib import get_close_matches
+from distutils.version import LooseVersion
 from pathlib import Path
 
 import numpy as np
@@ -102,7 +102,7 @@ def _check_mayavi_version(min_version='4.3.0'):
         raise RuntimeError("Need mayavi >= %s" % min_version)
 
 
-# adapted from scikit-learn utils/validation.py
+# adapted from scikit-learn utils_Eason/validation.py
 def check_random_state(seed):
     """Turn seed into a numpy.random.mtrand.RandomState instance.
 

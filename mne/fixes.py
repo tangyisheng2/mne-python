@@ -13,16 +13,14 @@ at which the fix is no longer needed.
 # License: BSD
 
 import inspect
+import os
+import warnings
 from distutils.version import LooseVersion
 from math import log
-import os
-from pathlib import Path
-import warnings
 
 import numpy as np
 import scipy
 from scipy import linalg
-from scipy.linalg import LinAlgError
 
 
 ###############################################################################
@@ -319,7 +317,7 @@ except ImportError:
 # Orth with rcond argument (SciPy 1.1)
 
 if LooseVersion(scipy.__version__) >= '1.1':
-    from scipy.linalg import orth
+    pass
 else:
     def orth(A, rcond=None):  # noqa
         u, s, vh = linalg.svd(A, full_matrices=False)
@@ -512,7 +510,7 @@ class BaseEstimator(object):
         for key in self._get_param_names():
             # We need deprecation warnings to always be on in order to
             # catch deprecated param values.
-            # This is set in utils/__init__.py but it gets overwritten
+            # This is set in utils_Eason/__init__.py but it gets overwritten
             # when running under python3 somehow.
             warnings.simplefilter("always", DeprecationWarning)
             try:

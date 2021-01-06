@@ -18,9 +18,7 @@ import numpy as np
 from scipy import sparse
 
 from ..defaults import HEAD_SIZE_DEFAULT, _handle_default
-from ..transforms import _frame_to_str
-from ..utils import (verbose, logger, warn,
-                     _check_preload, _validate_type, fill_doc, _check_option)
+from ..io._digitization import _get_data_as_dict_from_dig
 from ..io.compensator import get_current_comp
 from ..io.constants import FIFF
 from ..io.meas_info import anonymize_info, Info, MontageMixin, create_info
@@ -29,7 +27,9 @@ from ..io.pick import (channel_type, pick_info, pick_types, _picks_by_type,
                        channel_indices_by_type, pick_channels, _picks_to_idx,
                        _get_channel_types)
 from ..io.write import DATE_NONE
-from ..io._digitization import _get_data_as_dict_from_dig
+from ..transforms import _frame_to_str
+from ..utils import (verbose, logger, warn,
+                     _check_preload, _validate_type, fill_doc, _check_option)
 
 
 def _get_meg_system(info):
@@ -1686,7 +1686,7 @@ def combine_channels(inst, groups, method='mean', keep_stim=False,
     groups = OrderedDict(deepcopy(groups))
 
     # Convert string values of ``method`` into callables
-    # XXX Possibly de-duplicate with _make_combine_callable of mne/viz/utils.py
+    # XXX Possibly de-duplicate with _make_combine_callable of mne/viz/utils_Eason.py
     if isinstance(method, str):
         method_dict = {key: partial(getattr(np, key), axis=ch_axis)
                        for key in ('mean', 'median', 'std')}

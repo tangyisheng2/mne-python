@@ -1,9 +1,9 @@
 import inspect
-from inspect import getsource
 import os.path as op
-from pkgutil import walk_packages
 import re
 import sys
+from inspect import getsource
+from pkgutil import walk_packages
 from unittest import SkipTest
 
 import pytest
@@ -67,7 +67,7 @@ docstring_ignores = {
     'mne.fixes',
     'mne.io.write',
     'mne.io.meas_info.Info',
-    'mne.utils.docs.deprecated',
+    'mne.utils_Eason.docs.deprecated',
 }
 char_limit = 800  # XX eventually we should probably get this lower
 tab_ignores = [
@@ -202,8 +202,8 @@ def test_tabs():
 documented_ignored_mods = (
     'mne.fixes',
     'mne.io.write',
-    'mne.utils',
-    'mne.viz.utils',
+    'mne.utils_Eason',
+    'mne.viz.utils_Eason',
 )
 documented_ignored_names = """
 BaseEstimator
