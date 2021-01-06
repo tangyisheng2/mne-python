@@ -231,4 +231,4 @@ for instance_index in range(0, sliced_instance_array.__len__()):
 
 # psd_mean_pd_with_slice = pd.DataFrame(psd_mean_with_slice,
 #                                       columns=channel_column)
-pass
+np.savetxt(f'{"../EEGData/mwj_2b.edf".rstrip(".edf")}{".csv"}', result, delimiter=',')
