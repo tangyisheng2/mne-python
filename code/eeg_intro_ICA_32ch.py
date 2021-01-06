@@ -190,12 +190,12 @@ for event_index in range(0, epochs.events.shape[0]):
         psd_pd = pd.DataFrame(psd_list, columns=freqs)
 
         # Create slice for different frequency bands
-        theta_slice = psd_pd.iloc[:, 4:8]
+        delta_slice = psd_pd.iloc[:, 0:4]
         alpha_slice = psd_pd.iloc[:, 8:13]
         beta_slice = psd_pd.iloc[:, 13:30]
 
         # Calculate means
-        psd_mean[0, :] = theta_slice.mean(axis=1)
+        psd_mean[0, :] = delta_slice.mean(axis=1)
         psd_mean[1, :] = alpha_slice.mean(axis=1)
         psd_mean[2, :] = beta_slice.mean(axis=1)
 
