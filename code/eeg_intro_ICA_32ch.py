@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 import mne
+from mne.preprocessing import (ICA)
 import utils_Eason
 
 logger = logging.getLogger('mne')  # one selection here used across mne-python
@@ -63,7 +64,7 @@ def main(tester: str):
     # ecg_evoked.plot_joint()
     # Go ICA
 
-    # ica = ICA(n_components=0.95, method='fastica').fit(raw)  # todo: check define of n_components
+    ica = ICA(n_components=0.98, method='fastica').fit(raw)  # todo: check define of n_components
 
     # eeg_inds, scores = ica.find_bads_eeg(epochs, threshold='auto')
     #
