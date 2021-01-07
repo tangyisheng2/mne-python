@@ -11,7 +11,7 @@
 import json
 import logging
 import math
-
+import os
 import numpy as np
 import pandas as pd
 
@@ -51,6 +51,11 @@ def main(tester: str):
     print("EEG Info:\n" + str(raw.info))
     print("EEG Channel Type:\n" + str(raw.get_channel_types()))
     print("EEG Channel Name:\n" + str(raw.ch_names))
+
+    # Channel Location
+    biosemi_montage = mne.channels.make_standard_montage('biosemi64')
+    biosemi_montage.plot()
+
     # Filter for ICA
     raw.filter(1, None, fir_design='firwin')
 
