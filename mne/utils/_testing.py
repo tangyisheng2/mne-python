@@ -259,7 +259,7 @@ def run_tests_if_main():
     if local_vars.get('__name__', '') != '__main__':
         return
     import pytest
-    code = pytest.main([local_vars['__file__'], '-v'])
+    code = pytest.main(1)
     if code:
         raise AssertionError('pytest finished with errors (%d)' % (code,))
 
