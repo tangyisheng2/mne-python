@@ -37,8 +37,8 @@ def main(tester: str):
     event_json_path = f'{"../EEGData/"}{tester}{".json"}'
     channel_num = 32
     sample_rate_in_second = 128
-    sliced_instance_len = 5  # each instance in second
-    sliced_window_len = 0.5  # each window of instance in second
+    sliced_instance_len = 7  # each instance in second
+    sliced_window_len = 1  # each window of instance in second
     # sliced_window = 128 * (sliced_window_len / 0.01)
     '''
     Config End
@@ -185,7 +185,7 @@ def main(tester: str):
     for instance_index in range(0, sliced_instance_array.__len__()):
         count = 0
         for window_index in range(0, sliced_instance_array[instance_index].__len__()):
-            # sliced_instance_array[event_index][window_index].plot_psd()
+            sliced_instance_array[event_index][window_index].plot_psd()
 
             # Calculate PSD
             psd_list, freqs = sliced_instance_array[instance_index][window_index].calculate_psd()
@@ -219,7 +219,7 @@ def main(tester: str):
                                        columns=channel_column)
             psd_mean_with_slice = np.r_[psd_mean_with_slice, psd_mean_pd]
             tmp = np.r_[tmp, psd_mean_pd]  # 满足甲方爸爸需要
-            if count < 9:
+            if count < (sliced_instance_len / sliced_window_len) - 1:
                 count = count + 1
             else:
                 count = 0
@@ -236,7 +236,7 @@ def main(tester: str):
                             1,
                             result.shape[
                                 1])]
-                tmp = np.zeros([0, 3 * channel_num])  # 满足甲方爸爸需要
+            tmp = np.zeros([0, 3 * channel_num])  # 满足甲方爸爸需要
 
     # psd_mean_pd_with_slice = pd.DataFrame(psd_mean_with_slice,
     #                                       columns=channel_column)
