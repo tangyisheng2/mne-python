@@ -229,6 +229,7 @@ def main(tester: str):
                             1,
                             result.shape[
                                 1])]
+                    tmp = np.zeros([0, 3 * channel_num])  # 合并后清除tmp
                 except NameError:
                     result = np.zeros([0, tmp.size + 1], dtype=float)
                     result = np.r_[
@@ -236,7 +237,8 @@ def main(tester: str):
                             1,
                             result.shape[
                                 1])]
-            tmp = np.zeros([0, 3 * channel_num])  # 满足甲方爸爸需要
+                    tmp = np.zeros([0, 3 * channel_num])  # 合并后清除tmp
+        tmp = np.zeros([0, 3 * channel_num])  # instance完成后清除tmp
 
     # psd_mean_pd_with_slice = pd.DataFrame(psd_mean_with_slice,
     #                                       columns=channel_column)
